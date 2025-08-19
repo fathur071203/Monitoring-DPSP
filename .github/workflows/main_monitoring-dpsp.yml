@@ -30,12 +30,19 @@ jobs:
           source venv/bin/activate
           
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        # This step is likely the cause of the error.
+        # It's better to install dependencies on the runner to build the app,
+        # but the virtual environment should not be included in the artifact.
+        run: |
+          pip install -r requirements.txt
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        # Change the command to ensure all necessary files are included,
+        # but the virtual environment folder is excluded.
+        # The 'work' directory mentioned in the error is a temporary directory used by the runner.
+        run: zip -r release.zip . -x "venv/*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -60,7 +67,8 @@ jobs:
           name: python-app
       
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        # Ensure the unzipped content is in the root of the runner's workspace.
+        run: unzip release.zip -d .
         
       - name: Login to Azure
         uses: azure/login@v2
