@@ -28,7 +28,7 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-      
+          
       - name: Install dependencies
         run: pip install -r requirements.txt
         
@@ -68,4 +68,6 @@ jobs:
         with:
           app-name: 'Monitoring-DPSP'
           slot-name: 'Production'
+          startup-command: 'gunicorn --bind 0.0.0.0 --workers 1 --threads 8 --timeout 60 app:app'
+
           
