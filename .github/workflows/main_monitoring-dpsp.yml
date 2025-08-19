@@ -11,9 +11,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  buildanddeploy:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
 
     steps:
@@ -30,31 +31,10 @@ jobs:
           source venv/bin/activate
           
       - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+        run: |
+          pip install -r requirements.txt
+          pip install gunicorn
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: |
-            .
-            !venv/
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -69,5 +49,3 @@ jobs:
           app-name: 'Monitoring-DPSP'
           slot-name: 'Production'
           startup-command: 'gunicorn --bind 0.0.0.0 --workers 1 --threads 8 --timeout 60 app:app'
-
-          
