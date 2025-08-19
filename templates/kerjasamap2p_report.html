@@ -1,0 +1,994 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan Kerjasama P2P - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Kerjasama P2P</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Awal:</label>
+            <select id="startMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}">{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Akhir:</label>
+            <select id="endMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}" {% if loop.last %}selected{% endif %}>{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Kerjasama P2P</p>
+            <p id="kpiTotalCooperation" class="text-3xl font-bold text-gray-800 mt-1">{{ kpis.total_cooperation }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Rata-rata Kerjasama per Laporan</p>
+            <p id="kpiAvgCooperationPerReport" class="text-3xl font-bold text-gray-800 mt-1">{{ "{:,.2f}".format(kpis.avg_cooperation_per_report) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Bulan Terbanyak Kerjasama Baru</p>
+            <p id="kpiMonthMostNewCooperation" class="text-xl font-bold text-gray-800 mt-1">{{ kpis.month_most_new_cooperation }}</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Time Series) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Perusahaan Kerjasama P2P per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="cooperationTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Jumlah Total Perusahaan Kerjasama P2P per Tahun</h3>
+            <div class="w-full h-80">
+                <canvas id="yearlyCooperationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- D. TOP INSIGHT SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Top 5 Bulan dengan Jumlah Kerjasama Tertinggi</h3>
+            <div class="w-full h-80">
+                <canvas id="topCooperationMonthsChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Peran PJP dalam Kerjasama (Periode Terpilih)</h3>
+            <div class="w-full h-80">
+                <canvas id="pjpRoleDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- E. HEATMAP MATRIX: Kerjasama Bulanan per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Jumlah Kerjasama P2P Bulanan per Tahun</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Upload Laporan Kerjasama P2P Bulanan</h3>
+        <div class="overflow-x-auto">
+            <table id="uploadStatusTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- F. AUTO GENERATED INSIGHT -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan Kerjasama P2P -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan Kerjasama P2P</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat</th>
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th>
+                        <th class="py-3 px-6 text-left">Periode</th>
+                        <th class="py-3 px-6 text-left">Jumlah Kerjasama</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script>
+    // Global variables for charts to allow updating them
+    let cooperationTrendChartInstance;
+    let yearlyCooperationChartInstance;
+    let topCooperationMonthsChartInstance;
+    let pjpRoleDistributionChartInstance;
+
+    // Data from Flask backend (all raw data for client-side filtering)
+    // Gunakan JSON.parse untuk memastikan data ditangani sebagai objek JavaScript
+    const allP2PCooperationReports = JSON.parse('{{ initial_dashboard_data_p2p | tojson | safe }}');
+    const monthlyUploadStatusData = JSON.parse('{{ monthly_upload_status_p2p | tojson | safe }}');
+
+    console.log("Initial allP2PCooperationReports:", allP2PCooperationReports);
+    console.log("Initial monthlyUploadStatusData:", monthlyUploadStatusData);
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const monthNumbers = {
+        "Januari": "01", "Februari": "02", "Maret": "03", "April": "04", "Mei": "05", "Juni": "06",
+        "Juli": "07", "Agustus": "08", "September": "09", "Oktober": "10", "November": "11", "Desember": "12"
+    };
+
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                // If input is a numeric string (e.g., "01"), convert to full name
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                // If input is already a full month name, return as is
+                return monthInput;
+            }
+        }
+        // Fallback for unexpected inputs (e.g., "TW1" or undefined)
+        return monthInput;
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            // If input is a full month name, return its numeric value
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            // If input is a numeric string, parse it
+            if (!isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+        }
+        // Handle other cases like "TW1" etc., assign a default numeric value for sorting
+        const monthNameToNum = {
+            "TW1": 1, "TW2": 4, "TW3": 7, "TW4": 10
+        };
+        return monthNameToNum[monthInput] || 0; // Default to 0 if not found
+    }
+
+    const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    function getMonthShortName(monthInput) {
+        const monthMapShort = {
+            "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "Mei", "06": "Jun",
+            "07": "Jul", "08": "Agu", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Des",
+            "Januari": "Jan", "Februari": "Feb", "Maret": "Mar", "April": "Apr", "Mei": "Mei", "Juni": "Jun",
+            "Juli": "Jul", "Agustus": "Agu", "September": "Sep", "Oktober": "Okt", "November": "Nov", "Desember": "Des",
+            "TW1": "TW1", "TW2": "TW2", "TW3": "TW3", "TW4": "TW4"
+        };
+        return monthMapShort[monthInput] || monthInput;
+    }
+
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const availableYearsRaw = allP2PCooperationReports.map(report => report["Tahun Laporan"]);
+        const uniqueYears = [...new Set(availableYearsRaw)].sort((a, b) => a - b);
+
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startMonthNum = parseInt(document.getElementById('startMonth').value); // This is '01' to '12'
+        const endMonthNum = parseInt(document.getElementById('endMonth').value); // This is '01' to '12'
+
+        let filteredReports = allP2PCooperationReports.filter(report => {
+            const reportYear = parseInt(report["Tahun Laporan"]);
+            // Convert month name from report to number for comparison
+            const reportMonthNum = getMonthNumber(report["Periode Laporan"]); 
+
+            // Filter by year range first
+            if (reportYear < startYear || reportYear > endYear) {
+                return false;
+            }
+
+            // Then filter by month range within the selected year range
+            // If the report year is the startYear, check if report month is >= startMonth
+            if (reportYear === startYear && reportMonthNum < startMonthNum) {
+                return false;
+            }
+            // If the report year is the endYear, check if report month is <= endMonth
+            if (reportYear === endYear && reportMonthNum > endMonthNum) {
+                return false;
+            }
+            
+            return true;
+        });
+
+        // Ensure reports are sorted chronologically for charts
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], getMonthNumber(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], getMonthNumber(b["Periode Laporan"]) - 1);
+            return dateA - dateB;
+        });
+
+        currentFilteredReports = filteredReports;
+
+        console.log("Filtered Reports:", filteredReports);
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateTopCooperationMonths(filteredReports);
+        updatePJPRoleDistribution(filteredReports);
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+        updateUploadStatusMap();
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalCooperation = data.reduce((sum, report) => sum + report["Jumlah Perusahaan Kerjasama P2P"], 0);
+        const avgCooperationPerReport = data.length > 0 ? totalCooperation / data.length : 0;
+
+        document.getElementById('kpiTotalCooperation').textContent = totalCooperation;
+        document.getElementById('kpiAvgCooperationPerReport').textContent = avgCooperationPerReport.toFixed(2);
+
+        // Calculate Month with Most New Cooperation
+        const monthlyNewCooperation = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyNewCooperation[monthYear] = (monthlyNewCooperation[monthYear] || 0) + report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        let monthMostNewCooperation = "N/A";
+        if (Object.keys(monthlyNewCooperation).length > 0) {
+            monthMostNewCooperation = Object.keys(monthlyNewCooperation).reduce((a, b) => monthlyNewCooperation[a] > monthlyNewCooperation[b] ? a : b);
+        }
+        document.getElementById('kpiMonthMostNewCooperation').textContent = monthMostNewCooperation;
+    }
+
+    // C. VISUALISASI UTAMA (Time Series)
+    function updateCharts(data) {
+        const aggregatedData = {};
+        data.forEach(report => {
+            const label = `${getMonthShortName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!aggregatedData[label]) {
+                aggregatedData[label] = { 'Jumlah Perusahaan Kerjasama P2P': 0, date: new Date(report["Tahun Laporan"], getMonthNumber(report["Periode Laporan"]) - 1) };
+            }
+            aggregatedData[label]['Jumlah Perusahaan Kerjasama P2P'] += report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        const sortedAggregatedData = Object.keys(aggregatedData)
+            .map(key => ({ label: key, ...aggregatedData[key] }))
+            .sort((a, b) => a.date - b.date);
+
+        const chartLabels = sortedAggregatedData.map(item => item.label);
+        const chartJumlahCooperation = sortedAggregatedData.map(item => item['Jumlah Perusahaan Kerjasama P2P']);
+
+        if (cooperationTrendChartInstance) {
+            cooperationTrendChartInstance.destroy();
+        }
+        const ctx1 = document.getElementById('cooperationTrendChart').getContext('2d');
+        cooperationTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Jumlah Perusahaan Kerjasama P2P',
+                    data: chartJumlahCooperation,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Perusahaan Kerjasama' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+
+        // Yearly Cooperation Chart
+        const yearlyData = {};
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            if (!yearlyData[year]) {
+                yearlyData[year] = { 'Jumlah Perusahaan Kerjasama P2P': 0 };
+            }
+            yearlyData[year]['Jumlah Perusahaan Kerjasama P2P'] += report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        const sortedYearlyData = Object.keys(yearlyData)
+            .map(year => ({ year: year, ...yearlyData[year] }))
+            .sort((a, b) => a.year - b.year);
+
+        const yearlyChartLabels = sortedYearlyData.map(item => item.year);
+        const yearlyChartJumlahCooperation = sortedYearlyData.map(item => item['Jumlah Perusahaan Kerjasama P2P']);
+
+        if (yearlyCooperationChartInstance) {
+            yearlyCooperationChartInstance.destroy();
+        }
+        const ctx2 = document.getElementById('yearlyCooperationChart').getContext('2d');
+        yearlyCooperationChartInstance = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: yearlyChartLabels,
+                datasets: [{
+                    label: 'Jumlah Perusahaan Kerjasama P2P per Tahun',
+                    data: yearlyChartJumlahCooperation,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Perusahaan Kerjasama' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    // D. TOP INSIGHT SECTION Update
+    function updateTopCooperationMonths(data) {
+        const monthlySummary = {};
+        data.forEach(report => {
+            const key = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            if (!monthlySummary[key]) {
+                monthlySummary[key] = { cooperation: 0, date: new Date(report["Tahun Laporan"], getMonthNumber(report["Periode Laporan"]) - 1) };
+            }
+            monthlySummary[key].cooperation += report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        const sortedMonthlySummary = Object.keys(monthlySummary)
+            .map(key => ({ label: key, cooperation: monthlySummary[key].cooperation, date: monthlySummary[key].date }));
+
+        // Top 5 Bulan dengan Jumlah Kerjasama Tertinggi
+        const top5Cooperation = [...sortedMonthlySummary].sort((a, b) => b.cooperation - a.cooperation).slice(0, 5);
+        const top5CooperationLabels = top5Cooperation.map(item => item.label);
+        const top5CooperationData = top5Cooperation.map(item => item.cooperation);
+
+        if (topCooperationMonthsChartInstance) {
+            topCooperationMonthsChartInstance.destroy();
+        }
+        const ctx3 = document.getElementById('topCooperationMonthsChart').getContext('2d');
+        topCooperationMonthsChartInstance = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: top5CooperationLabels,
+                datasets: [{
+                    label: 'Jumlah Kerjasama P2P',
+                    data: top5CooperationData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Jumlah Kerjasama' }, ticks: { precision: 0 } },
+                    y: { title: { display: true, text: 'Bulan-Tahun' } }
+                }
+            }
+        });
+    }
+
+    function updatePJPRoleDistribution(data) {
+        const roleCounts = {};
+        data.forEach(report => {
+            if (report["Perusahaan Kerjasama P2P"]) {
+                report["Perusahaan Kerjasama P2P"].forEach(coop => {
+                    const role = coop["Peran PJP"];
+                    roleCounts[role] = (roleCounts[role] || 0) + 1;
+                });
+            }
+        });
+
+        const chartLabels = Object.keys(roleCounts);
+        const chartData = Object.values(roleCounts);
+
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)', // Red
+            'rgba(54, 162, 235, 0.7)', // Blue
+            'rgba(255, 205, 86, 0.7)', // Yellow
+            'rgba(75, 192, 192, 0.7)', // Green
+            'rgba(153, 102, 255, 0.7)', // Purple
+            'rgba(255, 159, 64, 0.7)'  // Orange
+        ];
+
+        if (pjpRoleDistributionChartInstance) {
+            pjpRoleDistributionChartInstance.destroy();
+        }
+        const ctx4 = document.getElementById('pjpRoleDistributionChart').getContext('2d');
+        new Chart(ctx4, {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // E. HEATMAP MATRIX Update
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { monthName: cooperationCount } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            const monthName = getMonthName(report["Periode Laporan"]); // Ensure full month name is used for key
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            // Aggregate cooperation count for the specific month name
+            heatmapData[year][monthName] = (heatmapData[year][monthName] || 0) + report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const monthsFullNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        // const monthShortNamesForHeader = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]; // For table header
+
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = ''; // Clear existing rows
+
+        console.log("Heatmap Data (before rendering):", heatmapData);
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            monthsFullNames.forEach(monthName => { // Iterate through full month names
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                // Access heatmapData using the full month name
+                const cooperationCount = heatmapData[year] ? (heatmapData[year][monthName] || 0) : 0;
+                cell.textContent = cooperationCount;
+
+                let bgColor = 'bg-white';
+                if (cooperationCount > 0) {
+                    if (cooperationCount >= 3) bgColor = 'bg-blue-200';
+                    else if (cooperationCount >= 1) bgColor = 'bg-blue-100';
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Kerjasama: ${cooperationCount} perusahaan`;
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // NEW: Function to update the Upload Status Map
+    function updateUploadStatusMap() {
+        const uploadStatusTableBody = document.getElementById('uploadStatusTable').querySelector('tbody');
+        if (!uploadStatusTableBody) {
+            console.error("Error: Could not find element with ID: uploadStatusTableBody");
+            return;
+        }
+        uploadStatusTableBody.innerHTML = ''; // Clear existing rows
+
+        console.log("Monthly Upload Status Data (before rendering):", monthlyUploadStatusData);
+
+        // Extract unique years from the monthlyUploadStatusData
+        const years = Object.keys(monthlyUploadStatusData)
+            .map(key => parseInt(key.split('-')[0])) // Get year from key (e.g., "2024-Agustus" -> 2024)
+            .filter((value, index, self) => self.indexOf(value) === index) // Get unique years
+            .sort((a, b) => a - b); // Sort years ascending
+
+        const monthsFullNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]; // Use full month names for iteration
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            monthsFullNames.forEach(monthName => { // Iterate through full month names
+                // Construct the period key using the full month name as stored in monthlyUploadStatusData
+                const periodKey = `${year}-${monthName}`; 
+
+                const status = monthlyUploadStatusData[periodKey];
+                console.log(`Checking periodKey: ${periodKey}, Status:`, status);
+
+
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+
+                let cellContent = '';
+                let bgColor = 'bg-white';
+                let tooltipText = '';
+
+                if (status) {
+                    if (status.uploaded) {
+                        if (status.days_late > 0) {
+                            bgColor = 'bg-orange-100';
+                            cellContent = `Terlambat (${status.days_late} hari)`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                        } else {
+                            bgColor = 'bg-green-100';
+                            cellContent = `Tepat Waktu`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Tepat Waktu)`;
+                        }
+                    } else {
+                        if (status.days_late !== null && status.days_late > 0) {
+                            bgColor = 'bg-red-200';
+                            cellContent = `Belum Upload (${status.days_late} hari)`;
+                            tooltipText = `Belum Upload. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                        } else {
+                            bgColor = 'bg-gray-100';
+                            cellContent = 'Belum Upload';
+                            tooltipText = `Belum Upload. Jatuh Tempo: ${status.due_date}`;
+                        }
+                    }
+                } else {
+                    cellContent = 'N/A';
+                    tooltipText = 'Data tidak tersedia';
+                }
+
+                cell.innerHTML = cellContent;
+                cell.classList.add(bgColor);
+                cell.title = tooltipText;
+                row.appendChild(cell);
+            });
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data kerjasama P2P yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const totalCooperation = data.reduce((sum, report) => sum + report["Jumlah Perusahaan Kerjasama P2P"], 0);
+        const totalReports = data.length;
+
+        // Find peak cooperation month
+        const monthlyCooperation = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyCooperation[monthYear] = (monthlyCooperation[monthYear] || 0) + report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        let peakCooperationMonth = "N/A";
+        let peakCooperationCount = 0;
+        if (Object.keys(monthlyCooperation).length > 0) {
+            peakCooperationMonth = Object.keys(monthlyCooperation).reduce((a, b) => monthlyCooperation[a] > monthlyCooperation[b] ? a : b);
+            peakCooperationCount = monthlyCooperation[peakCooperationMonth];
+        }
+
+        const firstReport = data[0];
+        const lastReport = data[data.length - 1];
+        const startDateString = `${getMonthName(firstReport['Periode Laporan'])} ${firstReport['Tahun Laporan']}`;
+        const endDateString = `${getMonthName(lastReport['Periode Laporan'])} ${lastReport['Tahun Laporan']}`;
+
+        // Trend analysis
+        const monthlySummaryForTrend = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!monthlySummaryForTrend[monthYear]) {
+                monthlySummaryForTrend[monthYear] = { count: 0, date: new Date(report["Tahun Laporan"], getMonthNumber(report["Periode Laporan"]) - 1) };
+            }
+            monthlySummaryForTrend[monthYear].count += report["Jumlah Perusahaan Kerjasama P2P"];
+        });
+
+        const sortedMonthlySummaryForTrend = Object.keys(monthlySummaryForTrend)
+            .map(key => ({ label: key, count: monthlySummaryForTrend[key].count, date: monthlySummaryForTrend[key].date }))
+            .sort((a, b) => a.date - b.date);
+
+        let maxIncrease = { month: 'N/A', value: 0 };
+        let maxDecrease = { month: 'N/A', value: 0 };
+        let trendInsight = "";
+
+        if (sortedMonthlySummaryForTrend.length > 1) {
+            for (let i = 1; i < sortedMonthlySummaryForTrend.length; i++) {
+                const currentMonthData = sortedMonthlySummaryForTrend[i];
+                const previousMonthData = sortedMonthlySummaryForTrend[i - 1];
+                const change = currentMonthData.count - previousMonthData.count;
+
+                if (change > maxIncrease.value) {
+                    maxIncrease = { month: currentMonthData.label, value: change };
+                }
+                if (change < maxDecrease.value) {
+                    maxDecrease = { month: currentMonthData.label, value: change };
+                }
+            }
+
+            if (maxIncrease.value > 0) {
+                trendInsight += `Peningkatan jumlah kerjasama terbesar terjadi pada <strong>${maxIncrease.month}</strong> dengan kenaikan <strong>${maxIncrease.value}</strong> perusahaan dari bulan sebelumnya. `;
+            }
+            if (maxDecrease.value < 0) {
+                trendInsight += `Penurunan jumlah kerjasama terbesar terjadi pada <strong>${maxDecrease.month}</strong> dengan penurunan <strong>${Math.abs(maxDecrease.value)}</strong> perusahaan dari bulan sebelumnya.`;
+            }
+            if (trendInsight === "") {
+                trendInsight = "Jumlah kerjasama cenderung stabil sepanjang periode ini.";
+            }
+        } else if (sortedMonthlySummaryForTrend.length === 1) {
+            trendInsight = "Hanya ada data untuk satu bulan, tidak dapat menganalisis tren.";
+        } else {
+            trendInsight = "";
+        }
+
+        summaryInsightText.innerHTML = `
+            Dalam periode <strong>${startDateString} &ndash; ${endDateString}</strong>, terdapat total <strong>${totalCooperation}</strong> perusahaan kerjasama P2P yang dilaporkan
+            dalam <strong>${totalReports}</strong> laporan.<br><br>
+            Bulan dengan jumlah kerjasama terbanyak adalah <strong>${peakCooperationMonth}</strong> (${peakCooperationCount} perusahaan).
+            <br><br>
+            ${trendInsight}
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = ''; // Clear existing rows
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="6" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan kerjasama P2P yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        // Sort reports by date in descending order (most recent first) for the table
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], getMonthNumber(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], getMonthNumber(b["Periode Laporan"]) - 1);
+            return dateB - dateA;
+        });
+
+        const currentSandiPjp = "{{ sandi_pjp }}";
+
+        sortedForTable.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/kerjasamap2p_report_detail/${report['Tahun Laporan']}/${report['Periode Laporan']}`;
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Sandi PJP'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Nomor Surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Tanggal Surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${getMonthName(report["Periode Laporan"])}/${report["Tahun Laporan"]}</td>
+                <td class="py-3 px-6 text-left">${report["Jumlah Perusahaan Kerjasama P2P"]}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            // Menggunakan modal kustom sebagai pengganti alert()
+            showCustomAlert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        const dataForExcel = [];
+        currentFilteredReports.forEach(report => {
+            const baseData = {
+                'Sandi PJP': report['Sandi PJP'],
+                'Nama PJP': "{{ pjp_name }}",
+                'Tahun Laporan': report['Tahun Laporan'],
+                'Periode Laporan': getMonthName(report['Periode Laporan']),
+                'Nomor Surat': report['Nomor Surat'],
+                'Tanggal Surat': report['Tanggal Surat'],
+                'Jumlah Perusahaan Kerjasama P2P': report['Jumlah Perusahaan Kerjasama P2P'],
+                'File URL': report['File URL']
+            };
+
+            if (report["Perusahaan Kerjasama P2P"] && report["Perusahaan Kerjasama P2P"].length > 0) {
+                report["Perusahaan Kerjasama P2P"].forEach(coop => {
+                    dataForExcel.push({
+                        ...baseData,
+                        'Nama Perusahaan Kerjasama': coop['Nama Perusahaan Kerjasama'],
+                        'Peran PJP': coop['Peran PJP'],
+                        'Tanggal Mulai Kerjasama': coop['Tanggal Mulai Kerjasama'],
+                        'Tanggal Akhir Kerjasama': coop['Tanggal Akhir Kerjasama'],
+                        'Keterangan Kerjasama': coop['Keterangan']
+                    });
+                });
+            } else {
+                dataForExcel.push({
+                    ...baseData,
+                    'Nama Perusahaan Kerjasama': 'N/A',
+                    'Peran PJP': 'N/A',
+                    'Tanggal Mulai Kerjasama': 'N/A',
+                    'Tanggal Akhir Kerjasama': 'N/A',
+                    'Keterangan Kerjasama': 'N/A'
+                });
+            }
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Kerjasama P2P");
+
+        const fileName = `Laporan_Kerjasama_P2P_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Custom Alert/Modal Function
+    function showCustomAlert(message) {
+        let alertModal = document.getElementById('customAlertModal');
+        if (!alertModal) {
+            alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden';
+            alertModal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <p id="customAlertMessage" class="text-gray-800 text-lg mb-4"></p>
+                    <button id="customAlertCloseBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg float-right">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                alertModal.classList.add('hidden');
+            });
+        }
+        document.getElementById('customAlertMessage').textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        populateYearDropdowns();
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            populateYearDropdowns();
+            document.getElementById('startMonth').value = '01';
+            document.getElementById('endMonth').value = '12';
+            document.getElementById('showInsightCheckbox').checked = false;
+            renderDashboard();
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            renderDashboard();
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+{% endblock %}

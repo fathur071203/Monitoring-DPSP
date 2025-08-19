@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan Keuangan Tahunan - {{ pjp_name }} ({{ report_data.get('tahun_laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard Keuangan Tahunan -->
+    <div class="mb-6">
+        <a href="{{ url_for('keuangantahunan_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard Keuangan Tahunan
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Keuangan Tahunan Audited</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Tahun Laporan: {{ report_data.get('tahun_laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report_data.get('nomor_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data.get('tanggal_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Modal Dasar:</span> Rp {{ "{:,.0f}".format(report_data.get('modal_dasar', 0)) }}</p>
+                        <p><span class="font-semibold">Modal Disetor:</span> Rp {{ "{:,.0f}".format(report_data.get('modal_disetor', 0)) }}</p>
+                        <p><span class="font-semibold">Total Aset:</span> Rp {{ "{:,.0f}".format(report_data.get('total_aset', 0)) }}</p>
+                        <p><span class="font-semibold">Aset Lancar:</span> Rp {{ "{:,.0f}".format(report_data.get('aset_lancar', 0)) }}</p>
+                        <p><span class="font-semibold">Aset Tidak Lancar:</span> Rp {{ "{:,.0f}".format(report_data.get('aset_tidak_lancar', 0)) }}</p>
+                        <p><span class="font-semibold">Kas dan Setara Kas:</span> Rp {{ "{:,.0f}".format(report_data.get('kas_dan_setara_kas', 0)) }}</p> 
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Total Liabilitas:</span> Rp {{ "{:,.0f}".format(report_data.get('total_liabilitas', 0)) }}</p>
+                        <p><span class="font-semibold">Liabilitas Lancar:</span> Rp {{ "{:,.0f}".format(report_data.get('liabilitas_lancar', 0)) }}</p>
+                        <p><span class="font-semibold">Liabilitas Tidak Lancar:</span> Rp {{ "{:,.0f}".format(report_data.get('liabilitas_tidak_lancar', 0)) }}</p>
+                        <p><span class="font-semibold">Ekuitas:</span> Rp {{ "{:,.0f}".format(report_data.get('ekuitas', 0)) }}</p> 
+                        <p><span class="font-semibold">Pendapatan:</span> Rp {{ "{:,.0f}".format(report_data.get('pendapatan', 0)) }}</p> 
+                        <p><span class="font-semibold">Pendapatan Fee:</span> Rp {{ "{:,.0f}".format(report_data.get('pendapatan_fee', 0)) }}</p> 
+                        <p><span class="font-semibold">Total Beban:</span> Rp {{ "{:,.0f}".format(report_data.get('total_beban', 0)) }}</p> 
+                        {# Removed Beban Pokok Penjualan, Laba Kotor, Arus Kas Operasi, Arus Kas Investasi, Arus Kas Pendanaan, Saldo Kas Akhir #}
+                        <p><span class="font-semibold">Beban Operasional:</span> Rp {{ "{:,.0f}".format(report_data.get('beban_operasional', 0)) }}</p>
+                        <p><span class="font-semibold">Laba Bersih:</span> Rp {{ "{:,.0f}".format(report_data.get('laba_bersih', 0)) }}</p> 
+                        <p><span class="font-semibold">Created at:</span> {{ report_data.get('created_at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rasio Keuangan Penting untuk Laporan Ini -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Rasio Keuangan Penting</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Rasio Lancar:</span> <span id="detailRasioLancar">N/A</span></p>
+                        <p><span class="font-semibold">Rasio Cepat:</span> <span id="detailRasioCepat">N/A</span></p>
+                        <p><span class="font-semibold">Rasio Kas:</span> <span id="detailRasioKas">N/A</span></p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Rasio Liabilitas terhadap Ekuitas:</span> <span id="detailRasioLiabilitasEkuitas">N/A</span></p>
+                        <p><span class="font-semibold">Marjin Laba Bersih:</span> <span id="detailMarjinLabaBersih">N/A</span></p>
+                        <p><span class="font-semibold">Return on Equity (ROE):</span> <span id="detailROE">N/A</span></p>
+                        <p><span class="font-semibold">Return on Assets (ROA):</span> <span id="detailROA">N/A</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Perbandingan dengan Tahun Sebelumnya -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan dengan Tahun Sebelumnya</h4>
+                <div class="w-full h-64">
+                    <canvas id="previousYearComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Chart: Komposisi Pendapatan dan Beban (Tahun Ini) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Komposisi Pendapatan dan Beban (Tahun Ini)</h4>
+                <div class="w-full h-64">
+                    <canvas id="incomeExpenseCompositionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) and 5-Year Trend -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Tren 5 Tahun -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren 5 Tahun (Pendapatan, Laba Bersih, Total Aset)</h4>
+                <div class="w-full h-64">
+                    <canvas id="fiveYearTrendChart"></canvas>
+                </div>
+            </div>
+
+            {# Removed New Chart: Komposisi Arus Kas (Tahun Ini) as data is not available #}
+
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report_data.get('file_url') and report_data.get('file_url') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden">
+                        <iframe src="{{ report_data.get('file_url') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report_data.get('file_url') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="report-data">
+    {{ report_data | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-previous-year-data">
+    {{ comparison_data_previous_year | tojson | safe }}
+</script>
+<script type="application/json" id="trend-data-5-years">
+    {{ trend_data_5_years | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        let report;
+        let comparisonDataPreviousYear;
+        let trendData5Years;
+
+        try {
+            report = JSON.parse(document.getElementById('report-data').textContent.trim());
+            console.log("Parsed report data:", report);
+        } catch (e) {
+            console.error("Error parsing report JSON:", e);
+            report = {};
+        }
+
+        try {
+            const rawPrevYearData = document.getElementById('comparison-previous-year-data').textContent.trim();
+            comparisonDataPreviousYear = rawPrevYearData ? JSON.parse(rawPrevYearData) : null;
+            console.log("Parsed comparisonDataPreviousYear:", comparisonDataPreviousYear);
+        } catch (e) {
+            console.error("Error parsing comparisonDataPreviousYear JSON:", e);
+            comparisonDataPreviousYear = null;
+        }
+
+        try {
+            const rawTrendData = document.getElementById('trend-data-5-years').textContent.trim();
+            trendData5Years = rawTrendData ? JSON.parse(rawTrendData) : [];
+            console.log("Parsed trendData5Years:", trendData5Years);
+        } catch (e) {
+            console.error("Error parsing trendData5Years JSON:", e);
+            trendData5Years = [];
+        }
+
+        // Helper to format currency
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        // --- Hitung dan Tampilkan Rasio Keuangan ---
+        const asetLancar = report.aset_lancar || 0;
+        const kasDanSetaraKas = report.kas_dan_setara_kas || 0; 
+        const pendapatan = report.pendapatan || 0; 
+        const labaBersih = report.laba_bersih || 0; 
+        const liabilitasLancar = report.liabilitas_lancar || 0;
+        const totalLiabilitas = report.total_liabilitas || 0; 
+        const ekuitas = report.ekuitas || 0;
+        const totalAset = report.total_aset || 0;
+
+        document.getElementById('detailRasioLancar').textContent = (liabilitasLancar > 0 ? (asetLancar / liabilitasLancar).toFixed(2) : 0) + 'x';
+        document.getElementById('detailRasioCepat').textContent = (liabilitasLancar > 0 ? (asetLancar / liabilitasLancar).toFixed(2) : 0) + 'x'; 
+        document.getElementById('detailRasioKas').textContent = (liabilitasLancar > 0 ? (kasDanSetaraKas / liabilitasLancar).toFixed(2) : 0) + 'x';
+        document.getElementById('detailRasioLiabilitasEkuitas').textContent = (ekuitas > 0 ? (totalLiabilitas / ekuitas).toFixed(2) : 0) + 'x';
+        document.getElementById('detailMarjinLabaBersih').textContent = (pendapatan > 0 ? (labaBersih / pendapatan * 100).toFixed(2) : 0) + '%';
+        document.getElementById('detailROE').textContent = (ekuitas > 0 ? (labaBersih / ekuitas * 100).toFixed(2) : 0) + '%';
+        document.getElementById('detailROA').textContent = (totalAset > 0 ? (labaBersih / totalAset * 100).toFixed(2) : 0) + '%';
+
+
+        // --- Grafik Batang: Perbandingan dengan Tahun Sebelumnya ---
+        const labelsPrevYear = ["Pendapatan", "Laba Bersih", "Total Aset", "Total Liabilitas", "Ekuitas"];
+        const dataCurrentYear = [
+            report.pendapatan || 0,
+            report.laba_bersih || 0,
+            report.total_aset || 0,
+            report.total_liabilitas || 0,
+            report.ekuitas || 0
+        ];
+
+        const dataPreviousYear = [];
+        if (comparisonDataPreviousYear) {
+            dataPreviousYear.push(
+                comparisonDataPreviousYear.pendapatan || 0,
+                comparisonDataPreviousYear.laba_bersih || 0,
+                comparisonDataPreviousYear.total_aset || 0,
+                comparisonDataPreviousYear.total_liabilitas || 0,
+                comparisonDataPreviousYear.ekuitas || 0
+            );
+        } else {
+            dataPreviousYear.push(0, 0, 0, 0, 0); // No previous year data
+        }
+
+        const ctxPrevYear = document.getElementById('previousYearComparisonChart').getContext('2d');
+        new Chart(ctxPrevYear, {
+            type: 'bar',
+            data: {
+                labels: labelsPrevYear,
+                datasets: [
+                    {
+                        label: `Tahun Ini (${report.tahun_laporan})`,
+                        data: dataCurrentYear,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: `Tahun Sebelumnya (${comparisonDataPreviousYear ? comparisonDataPreviousYear.tahun_laporan : 'N/A'})`, 
+                        data: dataPreviousYear,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Posisi Keuangan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // --- New Chart: Komposisi Pendapatan dan Beban (Tahun Ini) ---
+        const ctxIncomeExpenseComp = document.getElementById('incomeExpenseCompositionChart').getContext('2d');
+        new Chart(ctxIncomeExpenseComp, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pendapatan', 'Beban Operasional'], // Removed Beban Pokok Penjualan
+                datasets: [{
+                    data: [
+                        report.pendapatan || 0,
+                        report.beban_operasional || 0
+                    ],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.7)', // Green for Revenue
+                        'rgba(239, 68, 68, 0.7)' // Red for Operating Expenses
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } }
+                }
+            }
+        });
+
+
+        // --- Grafik Garis: Tren 5 Tahun ---
+        const trendLabels = trendData5Years.map(report => report.tahun_laporan);
+        const trendPendapatan = trendData5Years.map(report => report.pendapatan || 0);
+        const trendLabaBersih = trendData5Years.map(report => report.laba_bersih || 0);
+        const trendTotalAset = trendData5Years.map(report => report.total_aset || 0);
+
+        const ctxFiveYearTrend = document.getElementById('fiveYearTrendChart').getContext('2d');
+        new Chart(ctxFiveYearTrend, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    { label: 'Pendapatan', data: trendPendapatan, borderColor: 'rgb(34, 197, 94)', fill: false, tension: 0.1 },
+                    { label: 'Laba Bersih', data: trendLabaBersih, borderColor: 'rgb(139, 92, 246)', fill: false, tension: 0.1 },
+                    { label: 'Total Aset', data: trendTotalAset, borderColor: 'rgb(75, 192, 192)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

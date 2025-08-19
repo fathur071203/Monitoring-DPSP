@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Ikhtisar PJP{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Dashboard Ikhtisar PJP</h1>
+
+    <!-- Greeting Section -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg shadow-md mb-8 text-center">
+        <p class="text-xl font-semibold mb-2">Halo, Pengawas!</p>
+        <p id="currentDateGreeting" class="text-lg mb-3"></p>
+        <p id="motivationMessage" class="text-md italic"></p>
+    </div>
+
+    <!-- KPI Card Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"> {# Increased gap for better spacing #}
+        <div class="bg-white rounded-lg shadow-lg p-5 flex flex-col items-center justify-center text-center transition-transform transform hover:scale-105"> {# Added padding and hover effect #}
+            <div class="text-blue-600 mb-2">
+                <!-- Icon for Total PJP Terdaftar (e.g., Users/Companies) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <p class="text-sm font-medium text-gray-500">Total PJP Terdaftar</p>
+            <p class="text-4xl font-extrabold text-gray-800 mt-1">{{ overview_data.total_pjp }}</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-5 flex flex-col items-center justify-center text-center transition-transform transform hover:scale-105">
+            <div class="text-green-600 mb-2">
+                <!-- Icon for PJP Telah Melapor (e.g., Checkmark) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            </div>
+            <p class="text-sm font-medium text-gray-500">PJP Telah Melapor (Tepat Waktu)</p>
+            <p class="text-4xl font-extrabold text-gray-800 mt-1">{{ overview_data.pjp_report_status_distribution['Telah Melapor'] }}</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-5 flex flex-col items-center justify-center text-center transition-transform transform hover:scale-105">
+            <div class="text-red-600 mb-2">
+                <!-- Icon for PJP Belum Melapor (e.g., X-mark) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-circle"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+            </div>
+            <p class="text-sm font-medium text-gray-500">PJP Belum Melapor (Terlambat)</p>
+            <p class="text-4xl font-extrabold text-gray-800 mt-1">{{ overview_data.pjp_report_status_distribution['Belum Melapor'] }}</p>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Aktivitas Pelaporan PJP (Jumlah Laporan per Bulan)</h3>
+            <div class="w-full h-80">
+                <canvas id="pjpReportingActivityChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Status Pelaporan PJP</h3>
+            <div class="w-full h-80">
+                <canvas id="pjpReportStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 5 Active and Inactive PJPs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">5 PJP Teraktif Melapor</h3>
+            <ul class="list-none text-gray-700 space-y-3"> {# Removed default list styling #}
+                {% for pjp in overview_data.top_active_pjp %}
+                    <li class="flex items-center space-x-2">
+                        <span class="text-blue-500 font-bold">{{ loop.index }}.</span> {# Numbered list with styling #}
+                        <span class="font-semibold">{{ pjp.nama }}</span> ({{ pjp.total_reports }} laporan)
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">5 PJP Tidak Aktif Melapor</h3>
+            <ul class="list-none text-gray-700 space-y-3"> {# Removed default list styling #}
+                {% for pjp in overview_data.top_inactive_pjp %}
+                    <li class="flex items-center space-x-2">
+                        <span class="text-red-500 font-bold">{{ loop.index }}.</span> {# Numbered list with styling #}
+                        <span class="font-semibold">{{ pjp.nama }}</span> (Terakhir melapor: {{ pjp.last_report_date | default('Belum ada laporan') }})
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Other Reporting Visualizations/Information -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Ide Visualisasi Laporan Lainnya</h3>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+            <li><strong>Tren Jumlah Fraud per Bulan/Tahun:</strong> Visualisasi garis atau batang untuk menunjukkan pola peningkatan atau penurunan kasus fraud.</li>
+            <li><strong>Distribusi Kerugian Potensial Berdasarkan Kategori Fraud:</strong> Diagram lingkaran atau batang untuk melihat jenis fraud mana yang menyebabkan kerugian terbesar.</li>
+            <li><strong>Perbandingan Rencana vs. Realisasi Sertifikasi Karyawan (SKSP):</strong> Grafik batang yang membandingkan target dan pencapaian sertifikasi kompetensi PJP.</li>
+            <li><strong>Volume Transaksi LTDBB per Bulan:</strong> Visualisasi garis untuk melihat tren volume transaksi keluar, masuk, dan domestik dari waktu ke waktu.</li>
+            <li><strong>PJP dengan Keterlambatan Pelaporan Terbanyak:</strong> Tabel atau daftar PJP yang sering terlambat dalam mengajukan laporan.</li>
+        </ul>
+    </div>
+
+    <div class="text-center mt-8">
+        <a href="{{ url_for('analisis_pjp') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Lihat Daftar PJP & Analisis Fraud
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const overviewData = JSON.parse('{{ overview_data | tojson | safe }}');
+
+        // Function to get Indonesian day name
+        function getIndonesianDay(dayIndex) {
+            const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            return days[dayIndex];
+        }
+
+        // Function to get Indonesian month name
+        function getIndonesianMonth(monthIndex) {
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            return months[monthIndex];
+        }
+
+        // Generate current date and greeting
+        const now = new Date();
+        const dayName = getIndonesianDay(now.getDay());
+        const date = now.getDate();
+        const monthName = getIndonesianMonth(now.getMonth());
+        const year = now.getFullYear();
+
+        let greetingMessage = `Selamat ${dayName}, ${date} ${monthName} ${year}.`;
+        document.getElementById('currentDateGreeting').textContent = greetingMessage;
+
+        // Random motivational messages (only for Monday-Saturday as per request)
+        const motivationalMessages = [
+            "Semangat untuk menjalankan tugas hari ini!",
+            "Setiap tantangan adalah peluang untuk berkembang.",
+            "Fokus pada tujuan, bukan hambatan.",
+            "Kerja keras hari ini, hasil luar biasa esok hari.",
+            "Jangan pernah berhenti belajar dan berinovasi.",
+            "Dedikasi Anda adalah kunci keberhasilan."
+        ];
+
+        // Only show motivation if it's Monday-Saturday
+        if (now.getDay() >= 1 && now.getDay() <= 6) { // Monday (1) to Saturday (6)
+            const randomIndex = Math.floor(Math.random() * motivationalMessages.length);
+            document.getElementById('motivationMessage').textContent = motivationalMessages[randomIndex];
+        } else {
+            document.getElementById('motivationMessage').textContent = "Selamat menikmati akhir pekan!";
+        }
+
+
+        // Chart: PJP Reporting Activity (Number of Reports per Month)
+        const pjpReportingActivityCtx = document.getElementById('pjpReportingActivityChart').getContext('2d');
+        new Chart(pjpReportingActivityCtx, {
+            type: 'line',
+            data: {
+                labels: overviewData.reporting_activity_labels,
+                datasets: [{
+                    label: 'Jumlah Laporan',
+                    data: overviewData.reporting_activity_data,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Laporan'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Bulan'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart: PJP Report Status Distribution
+        const pjpReportStatusCtx = document.getElementById('pjpReportStatusChart').getContext('2d');
+        new Chart(pjpReportStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(overviewData.pjp_report_status_distribution),
+                datasets: [{
+                    data: Object.values(overviewData.pjp_report_status_distribution),
+                    backgroundColor: [
+                        '#38a169', // green-600 (Telah Melapor)
+                        '#e53e3e', // red-600 (Belum Melapor)
+                        '#f6ad55'  // orange-400 (Terlambat Melapor - changed from blue-600 for consistency with fraud_report)
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: false,
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

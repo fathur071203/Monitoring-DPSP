@@ -1,0 +1,731 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan Manajemen - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Manajemen & Hasil Pengawasan Dewan Komisaris</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+        <div class="bg-blue-100 border-b-4 border-blue-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-blue-700">Total Laporan</p>
+            <p id="kpiTotalReports" class="text-3xl font-bold text-blue-900 mt-1">0</p>
+        </div>
+        <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-green-700">Rata-rata Kepatuhan (%)</p>
+            <p id="kpiOverallCompliance" class="text-3xl font-bold text-green-900 mt-1">0%</p>
+        </div>
+        <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-purple-700">Kepemilikan Domestik Terkini</p>
+            <p id="kpiDomestikOwnership" class="text-3xl font-bold text-purple-900 mt-1">0%</p>
+        </div>
+        <div class="bg-orange-100 border-b-4 border-orange-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-orange-700">Kepemilikan Asing Terkini</p>
+            <p id="kpiAsingOwnership" class="text-3xl font-bold text-orange-900 mt-1">0%</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Tren) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Status Kepatuhan Utama</h3>
+            <div class="w-full h-80">
+                <canvas id="complianceTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Persentase Kepemilikan</h3>
+            <div class="w-full h-80">
+                <canvas id="ownershipTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Unggah Laporan Manajemen Tahunan</h3>
+        <div class="overflow-x-auto">
+            <table id="uploadStatusTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun Laporan</th>
+                        <th class="py-3 px-6 text-center">Status Unggah</th>
+                        <th class="py-3 px-6 text-center">Tanggal Unggah</th>
+                        <th class="py-3 px-6 text-center">Jatuh Tempo</th>
+                        <th class="py-3 px-6 text-center">Keterlambatan (Hari)</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- F. AUTO GENERATED INSIGHT -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Ringkasan dan Anomali Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan Manajemen Tahunan -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan Manajemen Tahunan</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat</th>
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th>
+                        <th class="py-3 px-6 text-left">Penilaian Industri SP Status</th>
+                        <th class="py-3 px-6 text-left">Pengawasan Bisnis PJP Status</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="initial-dashboard-data-manajemen">
+    {{ initial_dashboard_data_manajemen | tojson | safe }}
+</script>
+<script type="application/json" id="available-years-manajemen">
+    {{ available_years | tojson | safe }}
+</script>
+<script type="application/json" id="kpis-manajemen">
+    {{ kpis | tojson | safe }}
+</script>
+<script type="application/json" id="annual-upload-status-manajemen">
+    {{ annual_upload_status_manajemen | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script type="text/javascript">
+    // Global variables for charts to allow updating them
+    let complianceTrendChartInstance;
+    let ownershipTrendChartInstance;
+
+    // Data from Flask backend
+    let allManajemenReports;
+    let availableYearsInitial;
+    let kpisInitial;
+    let annualUploadStatusData;
+
+    // Define status_fields globally in JavaScript
+    const statusFields = [
+        "penilaian_perkembangan_industri_sp_status",
+        "pengawasan_perkembangan_bisnis_pjp_status",
+        "pengawasan_tata_kelola_pjp_status",
+        "pandangan_perbaikan_pjp_status",
+        "perubahan_komposisi_komisaris_status",
+        "implementasi_kebijakan_direksi_status",
+        "proses_pencapaian_kinerja_status",
+        "perbandingan_target_dan_realisasi_status",
+        "kendala_yang_dihadapi_pjp_status",
+        "tata_kelola_pengawasan_direksi_komisaris_status",
+        "tata_kelola_risiko_sdm_status",
+        "tata_kelola_ketersediaan_prosedur_status",
+        "tata_kelola_pengendalian_intern_status",
+        "asesmen_kualitatif_sdm_status",
+        "asesmen_kuantitatif_sdm_status",
+        "asesmen_kepemilikan_domestik_asing_status",
+        "asesmen_pengendalian_domestik_asing_status",
+        "asesmen_pemenuhan_modal_status",
+        "asesmen_manajemen_risiko_it_status",
+        "pemantauan_kepatuhan_status"
+    ];
+
+    try {
+        allManajemenReports = JSON.parse(document.getElementById('initial-dashboard-data-manajemen').textContent.trim());
+        console.log("Parsed allManajemenReports:", allManajemenReports);
+    } catch (e) {
+        console.error("Error parsing allManajemenReports JSON:", e);
+        allManajemenReports = [];
+    }
+
+    try {
+        availableYearsInitial = JSON.parse(document.getElementById('available-years-manajemen').textContent.trim());
+        console.log("Parsed availableYearsInitial (Manajemen):", availableYearsInitial);
+    } catch (e) {
+        console.error("Error parsing availableYearsInitial (Manajemen) JSON:", e);
+        availableYearsInitial = [];
+    }
+
+    try {
+        kpisInitial = JSON.parse(document.getElementById('kpis-manajemen').textContent.trim());
+        console.log("Parsed kpisInitial (Manajemen):", kpisInitial);
+    } catch (e) {
+        console.error("Error parsing kpisInitial (Manajemen) JSON:", e);
+        kpisInitial = {};
+    }
+
+    try {
+        annualUploadStatusData = JSON.parse(document.getElementById('annual-upload-status-manajemen').textContent.trim());
+        console.log("Parsed annualUploadStatusData (Manajemen):", annualUploadStatusData);
+    } catch (e) {
+        console.error("Error parsing annualUploadStatusData (Manajemen) JSON:", e);
+        annualUploadStatusData = {};
+    }
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to format numbers
+    function formatNumber(amount) {
+        return new Intl.NumberFormat('id-ID').format(amount);
+    }
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const uniqueYears = [...new Set(allManajemenReports.map(report => report["tahun_laporan"]))].sort((a, b) => a - b);
+
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+
+        let filteredReports = allManajemenReports.filter(report => {
+            const reportYear = parseInt(report["tahun_laporan"]);
+            return reportYear >= startYear && reportYear <= endYear;
+        });
+
+        // Sort by year
+        filteredReports.sort((a, b) => a["tahun_laporan"] - b["tahun_laporan"]);
+
+        currentFilteredReports = filteredReports;
+
+        console.log("DEBUG JS: filteredReports in renderDashboard:", filteredReports);
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateUploadStatusTable();
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalReports = data.length;
+        
+        // Recalculate overall compliance for filtered data
+        let totalStatusFieldsCount = 0;
+        let totalTrueStatusFields = 0;
+        
+        data.forEach(report => {
+            for (const field of statusFields) { // Use the globally defined statusFields
+                totalStatusFieldsCount += 1;
+                if (report.hasOwnProperty(field) && report[field] === true) {
+                    totalTrueStatusFields += 1;
+                }
+            }
+        });
+        const overallCompliancePercentage = (totalTrueStatusFields / totalStatusFieldsCount * 100) || 0;
+
+        const latestReport = data.length > 0 ? data[data.length - 1] : {};
+
+        document.getElementById('kpiTotalReports').textContent = formatNumber(totalReports);
+        document.getElementById('kpiOverallCompliance').textContent = `${overallCompliancePercentage.toFixed(2)}%`;
+        document.getElementById('kpiDomestikOwnership').textContent = `${(latestReport.persentase_kepemilikan_domestik || 0).toFixed(2)}%`;
+        document.getElementById('kpiAsingOwnership').textContent = `${(latestReport.persentase_kepemilikan_asing || 0).toFixed(2)}%`;
+    }
+
+    // C. VISUALISASI UTAMA (Tren) Update
+    function updateCharts(data) {
+        const chartLabels = data.map(report => report.tahun_laporan);
+        
+        // Data for Compliance Trend Chart (example: average of all boolean statuses)
+        const complianceData = data.map(report => {
+            let trueCount = 0;
+            let totalCount = 0;
+            
+            for (const field of statusFields) { // Use the globally defined statusFields
+                totalCount += 1;
+                if (report.hasOwnProperty(field) && report[field] === true) {
+                    trueCount += 1;
+                }
+            }
+            return (trueCount / totalCount * 100) || 0; // Percentage of true statuses
+        });
+
+        if (complianceTrendChartInstance) { complianceTrendChartInstance.destroy(); }
+        const ctx1 = document.getElementById('complianceTrendChart').getContext('2d');
+        complianceTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Rata-rata Kepatuhan (%)', data: complianceData, borderColor: 'rgb(75, 192, 192)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw.toFixed(2)}%` } } },
+                scales: { 
+                    x: { title: { display: true, text: 'Tahun Laporan' } }, 
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: 'Persentase (%)' }, ticks: { callback: function(value) { return value + '%'; } } }
+                }
+            }
+        });
+
+        // Data for Ownership Trend Chart
+        const domestikOwnershipData = data.map(report => report.persentase_kepemilikan_domestik || 0);
+        const asingOwnershipData = data.map(report => report.persentase_kepemilikan_asing || 0);
+
+        if (ownershipTrendChartInstance) { ownershipTrendChartInstance.destroy(); }
+        const ctx2 = document.getElementById('ownershipTrendChart').getContext('2d');
+        ownershipTrendChartInstance = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Kepemilikan Domestik (%)', data: domestikOwnershipData, borderColor: 'rgb(54, 162, 235)', fill: false, tension: 0.1 },
+                    { label: 'Kepemilikan Asing (%)', data: asingOwnershipData, borderColor: 'rgb(255, 99, 132)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw.toFixed(2)}%` } } },
+                scales: { 
+                    x: { title: { display: true, text: 'Tahun Laporan' } }, 
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: 'Persentase (%)' }, ticks: { callback: function(value) { return value + '%'; } } }
+                }
+            }
+        });
+    }
+
+    // Function to update the Annual Upload Status Table
+    function updateUploadStatusTable() {
+        const uploadStatusTableBody = document.getElementById('uploadStatusTable').querySelector('tbody');
+        uploadStatusTableBody.innerHTML = '';
+
+        const years = Object.keys(annualUploadStatusData)
+            .map(key => parseInt(key))
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .sort((a, b) => a - b);
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="5" class="py-3 px-6 text-center text-gray-500">Tidak ada data status unggah laporan manajemen tahunan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const periodKey = String(year);
+            const status = annualUploadStatusData[periodKey];
+
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            const statusCell = document.createElement('td');
+            statusCell.className = 'py-3 px-6 text-center';
+            let bgColor = 'bg-white';
+            let statusText = '';
+            let tooltipText = '';
+
+            if (status) {
+                if (status.uploaded) {
+                    if (status.days_late > 0) {
+                        bgColor = 'bg-orange-100';
+                        statusText = `Terlambat (${status.days_late} hari)`;
+                        tooltipText = `Diunggah: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                    } else {
+                        bgColor = 'bg-green-100';
+                        statusText = `Tepat Waktu`;
+                        tooltipText = `Diunggah: ${status.upload_date} (Tepat Waktu)`;
+                    }
+                } else {
+                    if (status.days_late !== null && status.days_late > 0) {
+                        bgColor = 'bg-red-200';
+                        statusText = `Belum Unggah (${status.days_late} hari)`;
+                        tooltipText = `Belum Unggah. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                    } else {
+                        bgColor = 'bg-gray-100';
+                        statusText = 'Belum Unggah';
+                        tooltipText = `Belum Unggah. Jatuh Tempo: ${status.due_date}`;
+                    }
+                }
+            } else {
+                statusText = 'N/A';
+                tooltipText = 'Data status tidak tersedia';
+            }
+            statusCell.textContent = statusText;
+            statusCell.classList.add(bgColor);
+            statusCell.title = tooltipText;
+            row.appendChild(statusCell);
+
+            const uploadDateCell = document.createElement('td');
+            uploadDateCell.className = 'py-3 px-6 text-center';
+            uploadDateCell.textContent = status ? (status.upload_date || 'N/A') : 'N/A';
+            row.appendChild(uploadDateCell);
+
+            const dueDateCell = document.createElement('td');
+            dueDateCell.className = 'py-3 px-6 text-center';
+            dueDateCell.textContent = status ? (status.due_date || 'N/A') : 'N/A';
+            row.appendChild(dueDateCell);
+
+            const daysLateCell = document.createElement('td');
+            daysLateCell.className = 'py-3 px-6 text-center';
+            daysLateCell.textContent = status && status.days_late !== null ? `${status.days_late} hari` : 'N/A';
+            row.appendChild(daysLateCell);
+
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+
+    // F. AUTO GENERATED INSIGHT (Anomaly Detection)
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data laporan manajemen tahunan yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        let insightHtml = `Analisis laporan manajemen tahunan dari **${data[0].tahun_laporan}** hingga **${data[data.length - 1].tahun_laporan}** menunjukkan: <br><br>`;
+        let anomalies = [];
+
+        const complianceThreshold = 80; // Example: below 80% compliance is an anomaly
+        const ownershipImbalanceThreshold = 20; // Example: difference between domestic/foreign ownership > 20% might be noteworthy
+
+        for (let i = 0; i < data.length; i++) {
+            const report = data[i];
+            const year = report.tahun_laporan;
+
+            let trueCount = 0;
+            let totalCount = 0;
+            
+            for (const field of statusFields) { // Use the globally defined statusFields
+                totalCount += 1;
+                if (report.hasOwnProperty(field) && report[field] === true) {
+                    trueCount += 1;
+                }
+            }
+            const currentCompliance = (trueCount / totalCount * 100) || 0;
+
+            if (currentCompliance < complianceThreshold) {
+                anomalies.push(`Pada tahun ${year}, **Rata-rata Kepatuhan** laporan berada di **${currentCompliance.toFixed(2)}%**, di bawah ambang batas ${complianceThreshold}%. Ini mungkin mengindikasikan area yang memerlukan perhatian lebih pada tata kelola atau kepatuhan.`);
+            }
+
+            if (report.perubahan_komposisi_komisaris_status === true) {
+                anomalies.push(`Pada tahun ${year}, terdapat **Perubahan Komposisi Komisaris**. Detailnya perlu ditinjau untuk memahami implikasinya.`);
+            }
+
+            const ownershipDiff = Math.abs((report.persentase_kepemilikan_domestik || 0) - (report.persentase_kepemilikan_asing || 0));
+            if (ownershipDiff > ownershipImbalanceThreshold && (report.persentase_kepemilikan_domestik || 0) < 50) {
+                 anomalies.push(`Pada tahun ${year}, **Kepemilikan Asing** mencapai **${(report.persentase_kepemilikan_asing || 0).toFixed(2)}%**, yang menunjukkan dominasi kepemilikan asing. Ini mungkin memerlukan pemantauan khusus terkait pengendalian.`);
+            } else if (ownershipDiff > ownershipImbalanceThreshold && (report.persentase_kepemilikan_asing || 0) < 50) {
+                 anomalies.push(`Pada tahun ${year}, **Kepemilikan Domestik** mencapai **${(report.persentase_kepemilikan_domestik || 0).toFixed(2)}%**, yang menunjukkan dominasi kepemilikan domestik.`);
+            }
+            
+            if (report.asesmen_pemenuhan_modal_status === false) {
+                anomalies.push(`Pada tahun ${year}, **Asesmen Pemenuhan Modal** menunjukkan status 'Tidak Terpenuhi'. Ini adalah area kritis yang memerlukan tindakan segera.`);
+            }
+        }
+
+        if (anomalies.length > 0) {
+            insightHtml += `<p class="font-semibold text-red-700">Potensi Anomali Ditemukan:</p><ul>`;
+            anomalies.forEach(anomaly => {
+                insightHtml += `<li>${anomaly}</li>`;
+            });
+            insightHtml += `</ul><br>`;
+            insightHtml += `**Rekomendasi:** Disarankan untuk meninjau secara detail laporan-laporan yang ditandai untuk memahami akar masalah dan mengambil tindakan korektif.`;
+        } else {
+            insightHtml += `<p class="text-green-700">Tidak ada anomali signifikan yang terdeteksi berdasarkan ambang batas yang ditetapkan pada laporan manajemen.</p>`;
+        }
+
+        const latestReport = data[data.length - 1];
+        insightHtml += `<br><p class="font-semibold">Ringkasan Laporan Manajemen Tahun ${latestReport.tahun_laporan}:</p>
+            <ul>
+                <li>Penilaian Perkembangan Industri SP: **${latestReport.penilaian_perkembangan_industri_sp_status ? 'Tersedia' : 'Tidak Tersedia'}**</li>
+                <li>Pengawasan Perkembangan Bisnis PJP: **${latestReport.pengawasan_perkembangan_bisnis_pjp_status ? 'Tersedia' : 'Tidak Tersedia'}**</li>
+                <li>Pengawasan Tata Kelola PJP: **${latestReport.pengawasan_tata_kelola_pjp_status ? 'Tersedia' : 'Tidak Tersedia'}**</li>
+                <li>Persentase Kepemilikan Domestik: **${(latestReport.persentase_kepemilikan_domestik || 0).toFixed(2)}%**</li>
+                <li>Persentase Kepemilikan Asing: **${(latestReport.persentase_kepemilikan_asing || 0).toFixed(2)}%**</li>
+                <li>Pihak Pengendali UBO: **${latestReport.pihak_pengendali_ubo || 'N/A'}**</li>
+            </ul>
+            <br>
+            <p>Laporan ini memberikan gambaran tentang kondisi perusahaan, kepatuhan terhadap regulasi, dan efektivitas pengawasan oleh Dewan Komisaris.</p>
+        `;
+
+        summaryInsightText.innerHTML = insightHtml;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="6" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan manajemen tahunan yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        const sortedForTable = [...data].sort((a, b) => b["tahun_laporan"] - a["tahun_laporan"]); // Descending order (most recent first)
+
+        const currentSandiPjp = "{{ sandi_pjp }}";
+
+        sortedForTable.forEach(report => {
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/manajemen_report_detail/${report['tahun_laporan']}`;
+            
+            // Helper to display boolean status as 'Ya' or 'Tidak'
+            const formatStatus = (status) => status ? 'Ya' : 'Tidak';
+
+            row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['tahun_laporan']}</td>
+                <td class="py-3 px-6 text-left">${report['nomor_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left">${report['tanggal_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left">${formatStatus(report['penilaian_perkembangan_industri_sp_status'])}</td>
+                <td class="py-3 px-6 text-left">${formatStatus(report['pengawasan_perkembangan_bisnis_pjp_status'])}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            showCustomAlert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        const dataForExcel = currentFilteredReports.map(report => {
+            const row = {
+                'Sandi PJP': "{{ sandi_pjp }}",
+                'Nama PJP': "{{ pjp_name }}",
+                'Tahun Laporan': report.tahun_laporan,
+                'Nomor Surat': report.nomor_surat,
+                'Tanggal Surat': report.tanggal_surat,
+                'Penilaian Perkembangan Industri SP': report.penilaian_perkembangan_industri_sp,
+                'Penilaian Perkembangan Industri SP Status': report.penilaian_perkembangan_industri_sp_status ? 'Ya' : 'Tidak',
+                'Pengawasan Perkembangan Bisnis PJP': report.pengawasan_perkembangan_bisnis_pjp,
+                'Pengawasan Perkembangan Bisnis PJP Status': report.pengawasan_perkembangan_bisnis_pjp_status ? 'Ya' : 'Tidak',
+                'Pengawasan Tata Kelola PJP': report.pengawasan_tata_kelola_pjp,
+                'Pengawasan Tata Kelola PJP Status': report.pengawasan_tata_kelola_pjp_status ? 'Ya' : 'Tidak',
+                'Pandangan Perbaikan PJP': report.pandangan_perbaikan_pjp,
+                'Pandangan Perbaikan PJP Status': report.pandangan_perbaikan_pjp_status ? 'Ya' : 'Tidak',
+                'Perubahan Komposisi Komisaris': report.perubahan_komposisi_komisaris,
+                'Perubahan Komposisi Komisaris Status': report.perubahan_komposisi_komisaris_status ? 'Ya' : 'Tidak',
+                'Implementasi Kebijakan Direksi': report.implementasi_kebijakan_direksi,
+                'Implementasi Kebijakan Direksi Status': report.implementasi_kebijakan_direksi_status ? 'Ya' : 'Tidak',
+                'Proses Pencapaian Kinerja': report.proses_pencapaian_kinerja,
+                'Proses Pencapaian Kinerja Status': report.proses_pencapaian_kinerja_status ? 'Ya' : 'Tidak',
+                'Perbandingan Target dan Realisasi': report.perbandingan_target_dan_realisasi,
+                'Perbandingan Target dan Realisasi Status': report.perbandingan_target_dan_realisasi_status ? 'Ya' : 'Tidak',
+                'Kendala yang Dihadapi PJP': report.kendala_yang_dihadapi_pjp,
+                'Kendala yang Dihadapi PJP Status': report.kendala_yang_dihadapi_pjp_status ? 'Ya' : 'Tidak',
+                'Tata Kelola Pengawasan Direksi Komisaris': report.tata_kelola_pengawasan_direksi_komisaris,
+                'Tata Kelola Pengawasan Direksi Komisaris Status': report.tata_kelola_pengawasan_direksi_komisaris_status ? 'Ya' : 'Tidak',
+                'Tata Kelola Risiko SDM': report.tata_kelola_risiko_sdm,
+                'Tata Kelola Risiko SDM Status': report.tata_kelola_risiko_sdm_status ? 'Ya' : 'Tidak',
+                'Tata Kelola Ketersediaan Prosedur': report.tata_kelola_ketersediaan_prosedur,
+                'Tata Kelola Ketersediaan Prosedur Status': report.tata_kelola_ketersediaan_prosedur_status ? 'Ya' : 'Tidak',
+                'Tata Kelola Pengendalian Intern': report.tata_kelola_pengendalian_intern,
+                'Tata Kelola Pengendalian Intern Status': report.tata_kelola_pengendalian_intern_status ? 'Ya' : 'Tidak',
+                'Asesmen Kualitatif SDM': report.asesmen_kualitatif_sdm,
+                'Asesmen Kualitatif SDM Status': report.asesmen_kualitatif_sdm_status ? 'Ya' : 'Tidak',
+                'Asesmen Kuantitatif SDM': report.asesmen_kuantitatif_sdm,
+                'Asesmen Kuantitatif SDM Status': report.asesmen_kuantitatif_sdm_status ? 'Ya' : 'Tidak',
+                'Asesmen Kepemilikan Domestik Asing': report.asesmen_kepemilikan_domestik_asing,
+                'Asesmen Kepemilikan Domestik Asing Status': report.asesmen_kepemilikan_domestik_asing_status ? 'Ya' : 'Tidak',
+                'Asesmen Pengendalian Domestik Asing': report.asesmen_pengendalian_domestik_asing,
+                'Asesmen Pengendalian Domestik Asing Status': report.asesmen_pengendalian_domestik_asing_status ? 'Ya' : 'Tidak',
+                'Asesmen Pemenuhan Modal': report.asesmen_pemenuhan_modal,
+                'Asesmen Pemenuhan Modal Status': report.asesmen_pemenuhan_modal_status ? 'Ya' : 'Tidak',
+                'Asesmen Manajemen Risiko IT': report.asesmen_manajemen_risiko_it,
+                'Asesmen Manajemen Risiko IT Status': report.asesmen_manajemen_risiko_it_status ? 'Ya' : 'Tidak',
+                'Pemantauan Kepatuhan': report.pemantauan_kepatuhan,
+                'Pemantauan Kepatuhan Status': report.pemantauan_kepatuhan_status ? 'Ya' : 'Tidak',
+                'Persentase Kepemilikan Domestik': report.persentase_kepemilikan_domestik,
+                'Pengendalian Domestik': report.pengendalian_domestik,
+                'Persentase Kepemilikan Asing': report.persentase_kepemilikan_asing,
+                'Pengendalian Asing': report.pengendalian_asing,
+                'Pihak Pengendali UBO': report.pihak_pengendali_ubo,
+                'Keterangan': report.keterangan,
+                'File URL': report.file_url,
+                'File Path': report.file_path,
+                'Created At': report.created_at
+            };
+
+            // Add management signatories dynamically if available
+            if (report.manajemen_sign && Array.isArray(report.manajemen_sign)) {
+                report.manajemen_sign.forEach((sign, idx) => {
+                    row[`Nama Penandatangan ${idx + 1}`] = sign.nama;
+                    row[`Jabatan Penandatangan ${idx + 1}`] = sign.jabatan;
+                    row[`Klasifikasi Penandatangan ${idx + 1}`] = sign.klasifikasi;
+                });
+            }
+            return row;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Manajemen Tahunan");
+
+        const fileName = `Laporan_Manajemen_Tahunan_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Custom Alert/Modal Function
+    function showCustomAlert(message) {
+        let alertModal = document.getElementById('customAlertModal');
+        if (!alertModal) {
+            alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden';
+            alertModal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <p id="customAlertMessage" class="text-gray-800 text-lg mb-4"></p>
+                    <button id="customAlertCloseBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg float-right">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                alertModal.classList.add('hidden');
+            });
+        }
+        document.getElementById('customAlertMessage').textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        populateYearDropdowns();
+        
+        // Populate initial KPIs using kpisInitial data directly from Flask
+        if (Object.keys(kpisInitial).length > 0) {
+            document.getElementById('kpiTotalReports').textContent = formatNumber(kpisInitial.total_reports_submitted || 0);
+            document.getElementById('kpiOverallCompliance').textContent = `${(kpisInitial.overall_compliance_percentage || 0).toFixed(2)}%`;
+            document.getElementById('kpiDomestikOwnership').textContent = `${(kpisInitial.latest_domestik_ownership || 0).toFixed(2)}%`;
+            document.getElementById('kpiAsingOwnership').textContent = `${(kpisInitial.latest_asing_ownership || 0).toFixed(2)}%`;
+        } else {
+            document.getElementById('kpiTotalReports').textContent = formatNumber(0);
+            document.getElementById('kpiOverallCompliance').textContent = `0.00%`;
+            document.getElementById('kpiDomestikOwnership').textContent = `0.00%`;
+            document.getElementById('kpiAsingOwnership').textContent = `0.00%`;
+        }
+
+        renderDashboard(); 
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            populateYearDropdowns();
+            document.getElementById('showInsightCheckbox').checked = false;
+            renderDashboard();
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            renderDashboard();
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+
+{% endblock %}

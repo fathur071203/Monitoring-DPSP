@@ -1,0 +1,895 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Laporan Keuangan Tahunan Global{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="flex items-center justify-between mb-8">
+        <a href="{{ url_for('analisis_laporan') }}" class="flex items-center text-blue-600 hover:text-blue-800 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Daftar Laporan
+        </a>
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center flex-grow">Analisis Laporan Keuangan Tahunan Global</h1>
+        <div><!-- Placeholder to balance the flex layout --></div>
+    </div>
+
+    <!-- KPI Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 justify-items-center"> {# Added justify-items-center #}
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Aset</h3>
+            <p id="totalAsetKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Ekuitas</h3>
+            <p id="totalEkuitasKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Pendapatan</h3>
+            <p id="totalPendapatanKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Laba Bersih</h3>
+            <p id="totalLabaBersihKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Aset per Laporan</h3>
+            <p id="avgAsetKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Laba Bersih per Laporan</h3>
+            <p id="avgLabaBersihKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center justify-between">
+        <div class="flex flex-wrap items-center mb-4 sm:mb-0 space-y-2 sm:space-y-0 sm:space-x-4">
+            <label class="text-lg font-medium text-gray-700">Tahun Awal:</label> {# Changed from Periode Awal #}
+            <select id="startYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+
+            <label class="text-lg font-medium text-gray-700 ml-4">Tahun Akhir:</label> {# Changed from Periode Akhir #}
+            <select id="endYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+            <button id="applyFilterBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center ml-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-filter mr-2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filter
+            </button>
+        </div>
+        <button id="exportExcelBtn"
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mr-2">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/>
+            </svg>
+            Export ke Excel
+        </button>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Keuangan Tahunan (Total Aset)</h3> {# Changed to Annual #}
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyAsetChart"></canvas> {# Changed ID #}
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Keuangan Tahunan (Laba Bersih)</h3> {# Changed to Annual #}
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyLabaBersihChart"></canvas> {# Changed ID #}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top/Bottom Reports and PJPs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-purple-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 Laporan Keuangan Tahunan (Total Aset)</h3> {# Changed to Annual #}
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topReportsAsetList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomReportsAsetList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 Laporan Keuangan Tahunan (Laba Bersih)</h3> {# Changed to Annual #}
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topReportsLabaBersihList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomReportsLabaBersihList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-green-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 PJP (Total Aset)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topPJPsAsetList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomPJPsAsetList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 PJP (Laba Bersih)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topPJPsLabaBersihList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomPJPsLabaBersihList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md"> {# Removed overflow-x-auto from here #}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">Daftar Laporan Keuangan Tahunan</h2> {# Changed title #}
+            <div class="flex items-center">
+                <label for="rowsPerPage" class="text-sm font-medium text-gray-700 mr-2">Baris per halaman:</label>
+                <select id="rowsPerPage" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto"> {# Added overflow-x-auto here to wrap only the table #}
+            <table class="min-w-full divide-y divide-gray-200 w-max" id="keuanganTahunanTable"> {# Changed ID #}
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="tahun_laporan">
+                            Tahun <span class="sort-icon" data-sort-for="tahun_laporan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="nama_pjp">
+                            Nama PJP <span class="sort-icon" data-sort-for="nama_pjp"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sandi PJP
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="modal_dasar">
+                            Modal Dasar <span class="sort-icon" data-sort-for="modal_dasar"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="modal_disetor">
+                            Modal Disetor <span class="sort-icon" data-sort-for="modal_disetor"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="total_aset">
+                            Total Aset <span class="sort-icon" data-sort-for="total_aset"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="aset_lancar">
+                            Aset Lancar <span class="sort-icon" data-sort-for="aset_lancar"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="aset_tidak_lancar">
+                            Aset Tidak Lancar <span class="sort-icon" data-sort-for="aset_tidak_lancar"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="total_hutang">
+                            Total Hutang <span class="sort-icon" data-sort-for="total_hutang"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="hutang_jangka_pendek">
+                            Hutang Jangka Pendek <span class="sort-icon" data-sort-for="hutang_jangka_pendek"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="hutang_jangka_panjang">
+                            Hutang Jangka Panjang <span class="sort-icon" data-sort-for="hutang_jangka_panjang"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="total_ekuitas">
+                            Total Ekuitas <span class="sort-icon" data-sort-for="total_ekuitas"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="total_pendapatan">
+                            Total Pendapatan <span class="sort-icon" data-sort-for="total_pendapatan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="pendapatan_fee">
+                            Pendapatan Fee <span class="sort-icon" data-sort-for="pendapatan_fee"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="beban_operasional">
+                            Beban Operasional <span class="sort-icon" data-sort-for="beban_operasional"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="total_beban">
+                            Total Beban <span class="sort-icon" data-sort-for="total_beban"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="laba_rugi_bersih">
+                            Laba Bersih <span class="sort-icon" data-sort-for="laba_rugi_bersih"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="laba">
+                            Laba <span class="sort-icon" data-sort-for="laba"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="rugi">
+                            Rugi <span class="sort-icon" data-sort-for="rugi"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="created_at">
+                            Tanggal Dibuat <span class="sort-icon" data-sort-for="created_at"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aksi
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="keuanganTahunanTableBody"> {# Changed ID #}
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <nav class="flex items-center justify-between pt-4" aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500" id="paginationInfo"></span>
+            <ul class="inline-flex -space-x-px text-sm" id="paginationControls">
+                <!-- Pagination buttons will be populated by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data passed from Flask
+    const allKeuanganTahunanReports = JSON.parse('{{ all_keuangan_tahunan_reports | tojson | trim | safe }}');
+    const trendChartData = JSON.parse('{{ trend_chart_data | tojson | trim | safe }}');
+    const initialTopBottomData = JSON.parse('{{ initial_top_bottom_data | tojson | trim | safe }}');
+
+    console.log("allKeuanganTahunanReports initialized:", allKeuanganTahunanReports);
+    console.log("trendChartData initialized:", trendChartData);
+    console.log("initialTopBottomData initialized:", initialTopBottomData);
+
+
+    let currentFilteredReports = [...allKeuanganTahunanReports]; // Initialize with all data
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+    let rowsPerPage = parseInt(document.getElementById('rowsPerPage').value); // Default rows per page
+    let currentPage = 1; // Current page number
+
+    // Chart.js instances
+    let yearlyAsetChartInstance;
+    let yearlyLabaBersihChartInstance;
+
+    // Function to format currency
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    // For annual reports, this might not be strictly needed for month names, but quarterMonthMap is useful for sorting
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const quarterMonthMap = {
+        "Q1": "01", "Q2": "04", "Q3": "07", "Q4": "10"
+    };
+    
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                return monthInput;
+            } else if (quarterMonthMap[monthInput]) {
+                return monthInput;
+            }
+        }
+        return monthInput;
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+            if (quarterMonthMap[monthInput]) {
+                return parseInt(quarterMonthMap[monthInput]);
+            }
+        }
+        return 0;
+    }
+
+    // Function to populate the table
+    function populateTable(reports) {
+        const tableBody = document.getElementById('keuanganTahunanTableBody');
+        tableBody.innerHTML = ''; // Clear existing rows
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = rowsPerPage === 'all' ? reports.length : startIndex + rowsPerPage;
+        const paginatedReports = reports.slice(startIndex, endIndex);
+
+        if (paginatedReports.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="22" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">Tidak ada data laporan Keuangan Tahunan untuk periode ini.</td></tr>`;
+            document.getElementById('paginationInfo').textContent = 'Menampilkan 0 dari 0 data';
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+
+        paginatedReports.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            // Assuming detail URL for Keuangan Tahunan follows a similar pattern, perhaps using just the year
+            const detailUrl = `/analisis_pjp/${report['sandi_pjp']}/keuangantahunan_report_detail/${report['tahun_laporan']}`;
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["tahun_laporan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["nama_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["sandi_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["modal_dasar"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["modal_disetor"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["total_aset"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["aset_lancar"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["aset_tidak_lancar"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["total_hutang"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["hutang_jangka_pendek"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["hutang_jangka_panjang"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["total_ekuitas"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["total_pendapatan"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["pendapatan_fee"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["beban_operasional"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["total_beban"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["laba"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(report["rugi"] || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency((report["laba"] || 0) - (report["rugi"] || 0))}</td> {# Laba Bersih #}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["created_at"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        updateSortIcons();
+        renderPaginationControls(reports.length);
+    }
+
+    // Function to filter reports based on selected period range
+    function filterReports() {
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        console.log("Filter parameters:", { startYear, endYear });
+
+        if (!startYear || !endYear) { // Handle cases where years might not be populated yet
+            currentFilteredReports = [...allKeuanganTahunanReports];
+            currentPage = 1; // Reset to first page
+            populateTable(currentFilteredReports);
+            updateVisualizations(currentFilteredReports);
+            updateKPIs(currentFilteredReports); // Update KPIs
+            console.log("No years selected, showing all reports.");
+            return;
+        }
+
+        const startYearInt = parseInt(startYear);
+        const endYearInt = parseInt(endYear);
+
+        currentFilteredReports = allKeuanganTahunanReports.filter(report => {
+            const reportYear = report["tahun_laporan"];
+            return reportYear >= startYearInt && reportYear <= endYearInt;
+        });
+
+        console.log("Filtered Reports count:", currentFilteredReports.length);
+        console.log("Filtered Reports data (first 5):", currentFilteredReports.slice(0, 5));
+
+        currentPage = 1; // Reset to first page after filtering
+        // Re-apply current sorting after filtering
+        if (currentSortColumn) {
+            sortReports(currentSortColumn, currentSortDirection);
+        } else {
+            populateTable(currentFilteredReports);
+        }
+        updateVisualizations(currentFilteredReports);
+        updateKPIs(currentFilteredReports); // Update KPIs
+    }
+
+    // Function to populate year dropdowns
+    function populateYearFilters() {
+        const startYearFilter = document.getElementById('startYearFilter');
+        const endYearFilter = document.getElementById('endYearFilter');
+
+        // Clear existing options
+        startYearFilter.innerHTML = '';
+        endYearFilter.innerHTML = '';
+
+        const years = new Set();
+        allKeuanganTahunanReports.forEach(report => {
+            years.add(report["tahun_laporan"]);
+        });
+
+        const sortedYears = Array.from(years).sort((a, b) => a - b);
+
+        console.log("Available years for filter:", sortedYears);
+
+        if (sortedYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            sortedYears.push(currentYear);
+            // Add a previous year if sensible, and if only current year is present
+            if (currentYear > 2000 && allKeuanganTahunanReports.length === 0) {
+                sortedYears.unshift(currentYear - 1); 
+            }
+        }
+
+        sortedYears.forEach(year => {
+            const optionStart = document.createElement('option');
+            optionStart.value = year;
+            optionStart.textContent = year;
+            startYearFilter.appendChild(optionStart);
+
+            const optionEnd = document.createElement('option');
+            optionEnd.value = year;
+            optionEnd.textContent = year;
+            endYearFilter.appendChild(optionEnd);
+        });
+
+        // Set default selected years to cover all data or current year range
+        if (sortedYears.length > 0) {
+            startYearFilter.value = sortedYears[0];
+            endYearFilter.value = sortedYears[sortedYears.length - 1];
+        } else {
+            const currentYear = new Date().getFullYear();
+            startYearFilter.value = currentYear;
+            endYearFilter.value = currentYear;
+        }
+    }
+
+    // Function to sort reports
+    function sortReports(column, direction) {
+        console.log(`Sorting by ${column} in ${direction} order.`);
+
+        currentFilteredReports.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            // Special handling for 'created_at' to sort by date
+            if (column === "created_at") { // Use else if to avoid re-evaluating
+                valA = new Date(valA);
+                valB = new Date(valB);
+            }
+            // Special handling for financial numbers
+            else if (['modal_dasar', 'modal_disetor', 'total_aset', 'aset_lancar', 'aset_tidak_lancar', 'total_hutang', 'hutang_jangka_pendek', 'hutang_jangka_panjang', 'total_ekuitas', 'total_pendapatan', 'pendapatan_fee', 'beban_operasional', 'total_beban', 'laba', 'rugi'].includes(column)) { // Added all relevant financial columns
+                valA = a[column] || 0;
+                valB = b[column] || 0;
+            } else if (column === 'laba_rugi_bersih') { // Handle calculated laba_rugi_bersih
+                valA = (a.laba || 0) - (a.rugi || 0);
+                valB = (b.laba || 0) - (b.rugi || 0);
+            }
+
+
+            if (valA < valB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+        populateTable(currentFilteredReports); // Re-populate table after sorting
+    }
+
+    // Function to update sort icons in table headers
+    function updateSortIcons() {
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.innerHTML = ''; // Clear all icons
+        });
+
+        if (currentSortColumn) {
+            const activeIcon = document.querySelector(`.sort-icon[data-sort-for="${currentSortColumn}"]`);
+            if (activeIcon) {
+                activeIcon.innerHTML = currentSortDirection === 'asc' ? '&#9650;' : '&#9660;'; // Up or Down arrow
+            }
+        }
+    }
+
+    // Function to handle header clicks for sorting
+    document.querySelectorAll('th[data-sort-by]').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort-by');
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            sortReports(currentSortColumn, currentSortDirection);
+        });
+    });
+
+    // Function to export data to Excel (XLSX format)
+    async function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor.');
+            return;
+        }
+
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        // Construct query parameters for the Flask endpoint
+        const params = new URLSearchParams({
+            startYear: startYear,
+            endYear: endYear
+        });
+
+        console.log("Exporting to Excel with parameters:", params.toString());
+
+
+        try {
+            const response = await fetch(`/export_keuangantahunan_xlsx?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            const fileName = `Laporan_Keuangan_Tahunan_Global_${startYear}_to_${endYear}.xlsx`;
+            
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            console.log("Excel export successful!");
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            alert('Terjadi kesalahan saat mengekspor data ke Excel.');
+        }
+    }
+
+    // --- Chart and Top/Bottom Analysis Functions ---
+
+    function updateVisualizations(reports) {
+        console.log("Updating visualizations with reports:", reports.length);
+
+        // Aggregate data for charts based on the filtered reports
+        const yearlyAggregated = {};
+
+        reports.forEach(report => {
+            const year = report["tahun_laporan"];
+            const totalAset = report["total_aset"] || 0;
+            const labaBersih = (report["laba"] || 0) - (report["rugi"] || 0);
+
+            // Yearly aggregation
+            const yearKey = String(year);
+            if (!yearlyAggregated[yearKey]) {
+                yearlyAggregated[yearKey] = { total_aset: 0, laba_bersih: 0 };
+            }
+            yearlyAggregated[yearKey].total_aset += totalAset;
+            yearlyAggregated[yearKey].laba_bersih += labaBersih;
+        });
+
+        console.log("Yearly aggregated data:", yearlyAggregated);
+
+
+        // Prepare data for Yearly Charts
+        const sortedYearlyKeys = Object.keys(yearlyAggregated).sort((a, b) => parseInt(a) - parseInt(b));
+        const yearlyLabels = sortedYearlyKeys;
+        const yearlyTotalAset = sortedYearlyKeys.map(k => yearlyAggregated[k].total_aset);
+        const yearlyLabaBersih = sortedYearlyKeys.map(k => yearlyAggregated[k].laba_bersih);
+
+
+        // Render Yearly Aset Chart
+        if (yearlyAsetChartInstance) {
+            yearlyAsetChartInstance.destroy();
+            yearlyAsetChartInstance = null;
+        }
+        const yearlyAsetCtx = document.getElementById('yearlyAsetChart').getContext('2d');
+        yearlyAsetCtx.canvas.height = 300;
+        yearlyAsetCtx.canvas.width = yearlyAsetCtx.canvas.parentNode.offsetWidth;
+        yearlyAsetChartInstance = new Chart(yearlyAsetCtx, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [{
+                    label: 'Total Aset Tahunan',
+                    data: yearlyTotalAset,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (IDR)' },
+                        ticks: { callback: function(value) { return formatCurrency(value); } }
+                    },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: function(context) { return `${context.dataset.label}: ${formatCurrency(context.raw)}`; } } }
+                }
+            }
+        });
+
+        // Render Yearly Laba Bersih Chart
+        if (yearlyLabaBersihChartInstance) {
+            yearlyLabaBersihChartInstance.destroy();
+            yearlyLabaBersihChartInstance = null;
+        }
+        const yearlyLabaBersihCtx = document.getElementById('yearlyLabaBersihChart').getContext('2d');
+        yearlyLabaBersihCtx.canvas.height = 300;
+        yearlyLabaBersihCtx.canvas.width = yearlyLabaBersihCtx.canvas.parentNode.offsetWidth;
+        yearlyLabaBersihChartInstance = new Chart(yearlyLabaBersihCtx, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [{
+                    label: 'Laba Bersih Tahunan',
+                    data: yearlyLabaBersih,
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (IDR)' },
+                        ticks: { callback: function(value) { return formatCurrency(value); } }
+                    },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: function(context) { return `${context.dataset.label}: ${formatCurrency(context.raw)}`; } } }
+                }
+            }
+        });
+
+
+        // Update Top/Bottom Reports and PJPs
+        const topBottomData = getTopBottomAnalysis(reports);
+        console.log("Top/Bottom Analysis Data:", topBottomData);
+
+        // Laporan Keuangan Tahunan (individual reports)
+        displayTopBottomLists('topReportsAsetList', topBottomData.top_5_reports_by_aset, 'total_aset', 'report', 'nominal');
+        displayTopBottomLists('bottomReportsAsetList', topBottomData.bottom_5_reports_by_aset, 'total_aset', 'report', 'nominal');
+        displayTopBottomLists('topReportsLabaBersihList', topBottomData.top_5_reports_by_laba_bersih, 'laba_bersih', 'report', 'nominal');
+        displayTopBottomLists('bottomReportsLabaBersihList', topBottomData.bottom_5_reports_by_laba_bersih, 'laba_bersih', 'report', 'nominal');
+        
+        // PJP (aggregated)
+        displayTopBottomLists('topPJPsAsetList', topBottomData.top_5_pjps_by_aset, 'total_aset', 'aggregated', 'nominal');
+        displayTopBottomLists('bottomPJPsAsetList', topBottomData.bottom_5_pjps_by_aset, 'total_aset', 'aggregated', 'nominal');
+        displayTopBottomLists('topPJPsLabaBersihList', topBottomData.top_5_pjps_by_laba_bersih, 'laba_bersih', 'aggregated', 'nominal');
+        displayTopBottomLists('bottomPJPsLabaBersihList', topBottomData.bottom_5_pjps_by_laba_bersih, 'laba_bersih', 'aggregated', 'nominal');
+    }
+
+    // Helper function for Top/Bottom Analysis
+    function getTopBottomAnalysis(reports) {
+        const pjpAggregated = {};        // { "PJP_Name": { "total_aset": N, "laba_bersih": M } }
+
+        reports.forEach(report => {
+            const pjpName = report["nama_pjp"] || "Tidak Diketahui";
+            const totalAset = report["total_aset"] || 0;
+            const labaBersih = (report["laba"] || 0) - (report["rugi"] || 0);
+
+            // Aggregate by PJP
+            if (!pjpAggregated[pjpName]) {
+                pjpAggregated[pjpName] = {"total_aset": 0, "laba_bersih": 0};
+            }
+            pjpAggregated[pjpName].total_aset += totalAset;
+            pjpAggregated[pjpName].laba_bersih += labaBersih;
+        });
+
+        // Convert to list of (name, data_dict) tuples for PJPs
+        const pjpsList = Object.entries(pjpAggregated);
+
+        // Sort and slice for top/bottom 5 for PJPs by total_aset
+        const top5PJPsByAset = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.total_aset - dataA.total_aset).slice(0, 5);
+        const bottom5PJPsByAset = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.total_aset - dataB.total_aset).slice(0, 5);
+
+        // Sort and slice for top/bottom 5 for PJPs by laba_bersih
+        const top5PJPsByLabaBersih = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.laba_bersih - dataA.laba_bersih).slice(0, 5);
+        const bottom5PJPsByLabaBersih = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.laba_bersih - dataB.laba_bersih).slice(0, 5);
+
+        // --- Top/Bottom Individual Reports ---
+        // Make copies to sort without affecting the original filteredReports
+        const reportsByAset = [...reports];
+        const reportsByLabaBersih = [...reports];
+
+        // Sort by total_aset
+        const top5ReportsByAset = reportsByAset.sort((a, b) => b["total_aset"] - a["total_aset"]).slice(0, 5);
+        const bottom5ReportsByAset = reportsByAset.sort((a, b) => a["total_aset"] - b["total_aset"]).slice(0, 5);
+
+        // Sort by laba_bersih
+        const top5ReportsByLabaBersih = reportsByLabaBersih.sort((a, b) => (b["laba"] - b["rugi"]) - (a["laba"] - a["rugi"])).slice(0, 5);
+        const bottom5ReportsByLabaBersih = reportsByLabaBersih.sort((a, b) => (a["laba"] - a["rugi"]) - (b["laba"] - b["rugi"])).slice(0, 5);
+
+        return {
+            top_5_reports_by_aset: top5ReportsByAset,
+            bottom_5_reports_by_aset: bottom5ReportsByAset,
+            top_5_reports_by_laba_bersih: top5ReportsByLabaBersih,
+            bottom_5_reports_by_laba_bersih: bottom5ReportsByLabaBersih,
+            top_5_pjps_by_aset: top5PJPsByAset,
+            bottom_5_pjps_by_aset: bottom5PJPsByAset,
+            top_5_pjps_by_laba_bersih: top5PJPsByLabaBersih,
+            bottom_5_pjps_by_laba_bersih: bottom5PJPsByLabaBersih,
+        };
+    }
+
+    // Helper function to display top/bottom lists
+    function displayTopBottomLists(elementId, data, valueKey, dataType, valueType) { // valueType: 'jumlah' or 'nominal'
+        const listElement = document.getElementById(elementId);
+        listElement.innerHTML = '';
+        if (data.length === 0) {
+            listElement.innerHTML = '<li>Tidak ada data.</li>';
+            return;
+        }
+        data.forEach(item => {
+            const listItem = document.createElement('li');
+            let name, displayValue;
+
+            if (dataType === 'report') {
+                // Item is a full report object
+                name = `${item["nama_pjp"]} (${item["tahun_laporan"]})`; // For annual reports, just year
+                if (valueKey === 'laba_bersih') {
+                    displayValue = (item["laba"] || 0) - (item["rugi"] || 0);
+                } else {
+                    displayValue = item[valueKey];
+                }
+            } else if (dataType === 'aggregated') {
+                // Item is an array [name, data_object] from Object.entries
+                name = item[0];
+                displayValue = item[1][valueKey];
+            }
+
+            if (valueType === 'nominal') {
+                displayValue = formatCurrency(displayValue);
+            } else {
+                displayValue = `${displayValue}`; // No specific unit for counts yet
+            }
+            
+            listItem.textContent = `${name}: ${displayValue}`;
+            listElement.appendChild(listItem);
+        });
+    }
+
+    // Function to update KPI cards
+    function updateKPIs(reports) {
+        const totalAset = reports.reduce((sum, report) => sum + (report["total_aset"] || 0), 0);
+        const totalEkuitas = reports.reduce((sum, report) => sum + (report["total_ekuitas"] || 0), 0);
+        const totalPendapatan = reports.reduce((sum, report) => sum + (report["total_pendapatan"] || 0), 0);
+        const totalLabaBersih = reports.reduce((sum, report) => sum + ((report["laba"] || 0) - (report["rugi"] || 0)), 0);
+        const totalReports = reports.length;
+
+        const avgAset = totalReports > 0 ? totalAset / totalReports : 0;
+        const avgLabaBersih = totalReports > 0 ? totalLabaBersih / totalReports : 0;
+
+        document.getElementById('totalAsetKpi').textContent = formatCurrency(totalAset);
+        document.getElementById('totalEkuitasKpi').textContent = formatCurrency(totalEkuitas);
+        document.getElementById('totalPendapatanKpi').textContent = formatCurrency(totalPendapatan);
+        document.getElementById('totalLabaBersihKpi').textContent = formatCurrency(totalLabaBersih);
+        document.getElementById('avgAsetKpi').textContent = formatCurrency(avgAset);
+        document.getElementById('avgLabaBersihKpi').textContent = formatCurrency(avgLabaBersih);
+    }
+
+    // --- Pagination Functions ---
+    function renderPaginationControls(totalReports) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = ''; // Clear existing controls
+
+        const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(totalReports / rowsPerPage);
+        const paginationInfo = document.getElementById('paginationInfo');
+
+        if (totalReports === 0) {
+            paginationInfo.textContent = 'Menampilkan 0 dari 0 data';
+            return;
+        }
+
+        const startEntry = (currentPage - 1) * rowsPerPage + 1;
+        const endEntry = rowsPerPage === 'all' ? totalReports : Math.min(currentPage * rowsPerPage, totalReports);
+        paginationInfo.textContent = `Menampilkan ${startEntry}-${endEntry} dari ${totalReports} data`;
+
+        if (totalPages <= 1) {
+            return; // No need for pagination if only one page
+        }
+
+        // Previous button
+        const prevButton = document.createElement('li');
+        prevButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}">Previous</a>`;
+        prevButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(prevButton);
+
+        // Page numbers
+        const maxPageButtons = 5; // Max number of page buttons to show
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('li');
+            pageButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ${i === currentPage ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700' : ''}">${i}</a>`;
+            pageButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentPage = i;
+                populateTable(currentFilteredReports);
+            });
+            paginationControls.appendChild(pageButton);
+        }
+
+        // Next button
+        const nextButton = document.createElement('li');
+        nextButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}">Next</a>`;
+        nextButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(nextButton);
+    }
+
+
+    // Event listener for rows per page change
+    document.getElementById('rowsPerPage').addEventListener('change', function() {
+        rowsPerPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1; // Reset to first page when rows per page changes
+        populateTable(currentFilteredReports);
+    });
+
+    // Add event listener for export button
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+    // Add event listener for the new Filter button
+    document.getElementById('applyFilterBtn').addEventListener('click', filterReports);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        populateYearFilters(); // Populate years first
+        filterReports();      // Apply initial filter (which also populates the table and visualizations)
+    });
+</script>
+{% endblock %}

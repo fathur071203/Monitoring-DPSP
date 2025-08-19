@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Berdasarkan Laporan{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8 text-center">
+    <h1 class="text-4xl font-extrabold text-gray-800 mb-10">Analisis Berdasarkan Laporan</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"> {# Increased gap for better spacing #}
+        {% set reports_categorized = {
+            "Insidental": [
+                {"name": "Laporan Gangguan IT", "type": "gangguan_it"}
+            ],
+            "Bulanan": [
+                {"name": "Laporan Fraud", "type": "fraud"},
+                {"name": "Laporan Transaksi Dana Bukan Bank (LTDBB)", "type": "ltdbb"},
+                {"name": "Laporan Kerjasama P2P", "type": "kerjasama_p2p"},
+                {"name": "Laporan DTTOT", "type": "dttot"}
+            ],
+            "Triwulanan": [
+                {"name": "Laporan Keuangan Triwulan", "type": "keuangan_triwulan"},
+                {"name": "Laporan Keluhan Nasabah dan Perlindungan Konsumen (PPPK)", "type": "pppk"},
+                {"name": "Laporan SKSP Triwulan", "type": "sksp_triwulan"}
+            ],
+            "Tahunan": [
+                {"name": "Laporan Keuangan Tahunan", "type": "keuangan_tahunan"},
+                {"name": "Laporan APU PPT", "type": "apu_ppt"},
+                {"name": "Laporan Rencana Edukasi Publik", "type": "rencana_edukasi"},
+                {"name": "Laporan Pelaksanaan Edukasi Publik", "type": "pelaksanaan_edukasi"},
+                {"name": "Laporan Manajemen & Hasil Pengawasan Dewan Komisaris", "type": "manajemen_dewan"},
+                {"name": "Laporan Audit Sistem Informasi", "type": "audit_sistem_informasi"},
+                {"name": "Laporan Pengujian Keamanan (Penetration Test)", "type": "penetration_test"},
+                {"name": "Laporan SKSP Tahunan", "type": "sksp_tahunan"},
+                {"name": "Laporan Perhitungan KPSP", "type": "kpsp"},
+                {"name": "Laporan Tahunan Sistem Pembayaran", "type": "sistem_pembayaran_tahunan"}
+            ]
+        } %}
+
+        {% for category, report_list in reports_categorized.items() %}
+            <div class="bg-white rounded-2xl shadow-xl p-8 border border-blue-100 transform hover:scale-105 transition-transform duration-300 ease-in-out"> {# Larger rounded corners, stronger shadow, subtle border #}
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 pb-3 border-blue-300"> {# Slightly larger bottom border #}
+                    {{ category }}
+                </h2>
+                <div class="flex flex-col space-y-4"> {# Increased space between buttons #}
+                    {% for report in report_list %}
+                        {# Untuk analisis_laporan.html, kita tidak memiliki sandi PJP, jadi tautan ini akan mengarah ke daftar PJP #}
+                        {# Atau, jika laporan ini adalah laporan agregat, kita bisa membuat rute terpisah #}
+                        {% set report_url = '#' %}
+                        {% if report.type == 'fraud' %}
+                            {# Mengarahkan ke halaman analisis fraud global yang baru #}
+                            {% set report_url = url_for('analisis_fraud_global') %} 
+                        {% elif report.type == 'dttot' %}
+                            {# Mengarahkan ke halaman analisis DTTOT global yang baru #}
+                            {% set report_url = url_for('analisis_dttot_global') %}
+                        {% elif report.type == 'ltdbb' %}
+                            {# Mengarahkan ke halaman analisis LTDBB global yang baru #}
+                            {% set report_url = url_for('analisis_ltdbb_global') %}
+                        {% elif report.type == 'kerjasama_p2p' %}
+                            {# Mengarahkan ke halaman analisis Kerjasama P2P global yang baru #}
+                            {% set report_url = url_for('analisis_kerjasamap2p_global') %}
+                        {% elif report.type == 'gangguan_it' %} {# Added this block for Gangguan IT #}
+                            {% set report_url = url_for('analisis_gangguanit_global') %}
+                        {% elif report.type == 'keuangan_triwulan' %} {# Added this block for Keuangan Triwulan #}
+                            {% set report_url = url_for('analisis_keuangantriwulanan_global') %}
+                        {% elif report.type == 'keuangan_tahunan' %} {# Added this block for Keuangan Tahunan #}
+                            {% set report_url = url_for('analisis_keuangantahunan_global') %}
+                        {% elif report.type == 'penetration_test' %} {# Added this block for Penetration Test #}
+                            {% set report_url = url_for('analisis_pentest_global') %}
+                        {% elif report.type == 'audit_sistem_informasi' %} {# Added this block for Audit Sistem Informasi #}
+                            {% set report_url = url_for('analisis_auditsi_global') %}
+                        {% elif report.type == 'apu_ppt' %} {# Added this block for APU PPT #}
+                            {% set report_url = url_for('analisis_apuppt_global') %}
+                        {% elif report.type == 'manajemen_dewan' %} {# Added this block for Manajemen #}
+                            {% set report_url = url_for('analisis_manajemen_global') %}
+                        {% else %}
+                            {# Placeholder for other report types #}
+                            {% set report_url = '#' %}
+                        {% endif %}
+
+                        <a href="{{ report_url }}"
+                           class="group bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-4 px-6 rounded-lg
+                                  shadow-md hover:from-blue-600 hover:to-blue-700 transition duration-300 ease-in-out
+                                  flex items-center justify-center text-center text-lg transform hover:-translate-y-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text mr-3 transition-transform duration-300 group-hover:scale-110"> {# Corrected SVG path #}
+                                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 1 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+                            </svg>
+                            <span class="transition-colors duration-300 group-hover:text-blue-100">{{ report.name }}</span> {# Added group-hover text color change #}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <p class="text-xl text-gray-600 mt-10"> {# Increased top margin #}
+        Pilih kategori laporan di atas untuk melihat detail analisisnya.
+    </p>
+</div>
+{% endblock %}

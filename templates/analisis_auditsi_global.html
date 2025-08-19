@@ -1,0 +1,969 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Laporan Audit Sistem Informasi Global{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="flex items-center justify-between mb-8">
+        <a href="{{ url_for('analisis_laporan') }}" class="flex items-center text-blue-600 hover:text-blue-800 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Daftar Laporan
+        </a>
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center flex-grow">Analisis Laporan Audit Sistem Informasi Global</h1>
+        <div><!-- Placeholder to balance the flex layout --></div>
+    </div>
+
+    <!-- KPI Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 justify-items-center"> {# Added justify-items-center #}
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Temuan</h3>
+            <p id="totalFindingsKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Persentase Temuan Terselesaikan</h3>
+            <p id="percentageResolvedKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Temuan per Laporan</h3>
+            <p id="avgFindingsKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Laporan</h3> <!-- NEW KPI -->
+            <p id="totalReportsKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Skor Confidentiality</h3>
+            <p id="avgConfidentialityKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Skor Integrity</h3>
+            <p id="avgIntegrityKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Skor Availability</h3>
+            <p id="avgAvailabilityKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Skor Authenticity</h3> <!-- NEW KPI -->
+            <p id="avgAuthenticityKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Skor Non-Repudiation</h3> <!-- NEW KPI -->
+            <p id="avgNonRepudiationKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center justify-between">
+        <div class="flex flex-wrap items-center mb-4 sm:mb-0 space-y-2 sm:space-y-0 sm:space-x-4">
+            <label class="text-lg font-medium text-gray-700">Tahun Awal:</label>
+            <select id="startYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+
+            <label class="text-lg font-medium text-gray-700 ml-4">Tahun Akhir:</label>
+            <select id="endYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+            <button id="applyFilterBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center ml-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-filter mr-2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filter
+            </button>
+        </div>
+        <button id="exportExcelBtn"
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mr-2">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 1 2 2h4"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/>
+            </svg>
+            Export ke Excel
+        </button>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Temuan Tahunan (Jumlah)</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyFindingsCountChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Rata-rata Skor CIAAN Tahunan</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyCIAANChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top/Bottom Reports and PJPs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-purple-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 Laporan Audit SI (Jumlah Temuan)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topReportsFindingsList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomReportsFindingsList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 Laporan Audit SI (Skor Confidentiality)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbaik:</h4>
+                    <ul id="topReportsConfidentialityList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terburuk:</h4>
+                    <ul id="bottomReportsConfidentialityList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-green-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 PJP (Jumlah Temuan Audit SI)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topPJPsFindingsList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomPJPsFindingsList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 PJP (Skor Confidentiality)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbaik:</h4>
+                    <ul id="topPJPsConfidentialityList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terburuk:</h4>
+                    <ul id="bottomPJPsConfidentialityList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md"> {# Removed overflow-x-auto from here #}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">Daftar Laporan Audit Sistem Informasi</h2>
+            <div class="flex items-center">
+                <label for="rowsPerPage" class="text-sm font-medium text-gray-700 mr-2">Baris per halaman:</label>
+                <select id="rowsPerPage" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto"> {# Added overflow-x-auto here to wrap only the table #}
+            <table class="min-w-full divide-y divide-gray-200 w-max" id="auditsiTable"> {# Changed ID #}
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="tahun_laporan">
+                            Tahun <span class="sort-icon" data-sort-for="tahun_laporan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="nama_pjp">
+                            Nama PJP <span class="sort-icon" data-sort-for="nama_pjp"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sandi PJP
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nomor Surat
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="confidentiality">
+                            Confidentiality <span class="sort-icon" data-sort-for="confidentiality"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="integrity">
+                            Integrity <span class="sort-icon" data-sort-for="integrity"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="availability">
+                            Availability <span class="sort-icon" data-sort-for="availability"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="authenticity">
+                            Authenticity <span class="sort-icon" data-sort-for="authenticity"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="non_repudiation">
+                            Non-Repudiation <span class="sort-icon" data-sort-for="non_repudiation"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_temuan">
+                            Jumlah Temuan <span class="sort-icon" data-sort-for="jumlah_temuan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_temuan_diselesaikan">
+                            Temuan Diselesaikan <span class="sort-icon" data-sort-for="jumlah_temuan_diselesaikan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_temuan_belum_diselesaikan">
+                            Temuan Belum Diselesaikan <span class="sort-icon" data-sort-for="jumlah_temuan_belum_diselesaikan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="created_at">
+                            Tanggal Dibuat <span class="sort-icon" data-sort-for="created_at"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aksi
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="auditsiTableBody"> {# Changed ID #}
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <nav class="flex items-center justify-between pt-4" aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500" id="paginationInfo"></span>
+            <ul class="inline-flex -space-x-px text-sm" id="paginationControls">
+                <!-- Pagination buttons will be populated by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data passed from Flask
+    const allAuditsiReports = JSON.parse('{{ all_auditsi_reports | tojson | trim | safe }}');
+    const trendChartData = JSON.parse('{{ trend_chart_data | tojson | trim | safe }}');
+    const initialTopBottomData = JSON.parse('{{ initial_top_bottom_data | tojson | trim | safe }}');
+
+    console.log("allAuditsiReports initialized:", allAuditsiReports);
+    console.log("trendChartData initialized:", trendChartData);
+    console.log("initialTopBottomData initialized:", initialTopBottomData);
+
+
+    let currentFilteredReports = [...allAuditsiReports]; // Initialize with all data
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+    let rowsPerPage = parseInt(document.getElementById('rowsPerPage').value); // Default rows per page
+    let currentPage = 1; // Current page number
+
+    // Chart.js instances
+    let yearlyFindingsCountChartInstance;
+    let yearlyCriticalHighChartInstance; // This one is not used, can be removed if not needed.
+    let yearlyCIAANChartInstance; // New chart instance for CIAAN scores
+
+    // Function to format currency (not directly used for audit findings, but kept for consistency)
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                return monthInput;
+            }
+        }
+        return monthInput;
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+        }
+        return 0;
+    }
+
+    // Function to populate the table
+    function populateTable(reports) {
+        const tableBody = document.getElementById('auditsiTableBody');
+        tableBody.innerHTML = ''; // Clear existing rows
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = rowsPerPage === 'all' ? reports.length : startIndex + rowsPerPage;
+        const paginatedReports = reports.slice(startIndex, endIndex);
+
+        if (paginatedReports.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="14" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">Tidak ada data laporan Audit Sistem Informasi untuk periode ini.</td></tr>`;
+            document.getElementById('paginationInfo').textContent = 'Menampilkan 0 dari 0 data';
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+
+        paginatedReports.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            const detailUrl = `/analisis_pjp/${report['sandi_pjp']}/auditsi_report_detail/${report['tahun_laporan']}`;
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["tahun_laporan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["nama_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["sandi_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["nomor_surat"] || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["confidentiality"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["integrity"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["availability"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["authenticity"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["non_repudiation"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_temuan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_temuan_diselesaikan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_temuan_belum_diselesaikan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["created_at"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        updateSortIcons();
+        renderPaginationControls(reports.length);
+    }
+
+    // Function to filter reports based on selected period range
+    function filterReports() {
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        console.log("Filter parameters:", { startYear, endYear });
+
+        if (!startYear || !endYear) { // Handle cases where years might not be populated yet
+            currentFilteredReports = [...allAuditsiReports];
+            currentPage = 1; // Reset to first page
+            populateTable(currentFilteredReports);
+            updateVisualizations(currentFilteredReports);
+            updateKPIs(currentFilteredReports); // Update KPIs
+            console.log("No years selected, showing all reports.");
+            return;
+        }
+
+        const startYearInt = parseInt(startYear);
+        const endYearInt = parseInt(endYear);
+
+        currentFilteredReports = allAuditsiReports.filter(report => {
+            const reportYear = report["tahun_laporan"];
+            return reportYear >= startYearInt && reportYear <= endYearInt;
+        });
+
+        console.log("Filtered Reports count:", currentFilteredReports.length);
+        console.log("Filtered Reports data (first 5):", currentFilteredReports.slice(0, 5));
+
+        currentPage = 1; // Reset to first page after filtering
+        // Re-apply current sorting after filtering
+        if (currentSortColumn) {
+            sortReports(currentSortColumn, currentSortDirection);
+        } else {
+            populateTable(currentFilteredReports);
+        }
+        updateVisualizations(currentFilteredReports);
+        updateKPIs(currentFilteredReports); // Update KPIs
+    }
+
+    // Function to populate year dropdowns
+    function populateYearFilters() {
+        const startYearFilter = document.getElementById('startYearFilter');
+        const endYearFilter = document.getElementById('endYearFilter');
+
+        // Clear existing options
+        startYearFilter.innerHTML = '';
+        endYearFilter.innerHTML = '';
+
+        const years = new Set();
+        allAuditsiReports.forEach(report => {
+            years.add(report["tahun_laporan"]);
+        });
+
+        const sortedYears = Array.from(years).sort((a, b) => a - b);
+
+        console.log("Available years for filter:", sortedYears);
+
+        if (sortedYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            sortedYears.push(currentYear);
+            // Add a previous year if sensible, and if only current year is present
+            if (currentYear > 2000 && allAuditsiReports.length === 0) {
+                sortedYears.unshift(currentYear - 1); 
+            }
+        }
+
+        sortedYears.forEach(year => {
+            const optionStart = document.createElement('option');
+            optionStart.value = year;
+            optionStart.textContent = year;
+            startYearFilter.appendChild(optionStart);
+
+            const optionEnd = document.createElement('option');
+            optionEnd.value = year;
+            optionEnd.textContent = year;
+            endYearFilter.appendChild(optionEnd);
+        });
+
+        // Set default selected years to cover all data or current year range
+        if (sortedYears.length > 0) {
+            startYearFilter.value = sortedYears[0];
+            endYearFilter.value = sortedYears[sortedYears.length - 1];
+        } else {
+            const currentYear = new Date().getFullYear();
+            startYearFilter.value = currentYear;
+            endYearFilter.value = currentYear;
+        }
+    }
+
+    // Function to sort reports
+    function sortReports(column, direction) {
+        console.log(`Sorting by ${column} in ${direction} order.`);
+
+        currentFilteredReports.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            // Special handling for 'created_at' to sort by date
+            if (column === "created_at") {
+                valA = new Date(valA);
+                valB = new Date(valB);
+            }
+            // Special handling for numeric findings/scores
+            else if (['confidentiality', 'integrity', 'availability', 'authenticity', 'non_repudiation', 'jumlah_temuan', 'jumlah_temuan_diselesaikan', 'jumlah_temuan_belum_diselesaikan'].includes(column)) {
+                valA = a[column] || 0;
+                valB = b[column] || 0;
+            }
+
+            if (valA < valB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+        populateTable(currentFilteredReports); // Re-populate table after sorting
+    }
+
+    // Function to update sort icons in table headers
+    function updateSortIcons() {
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.innerHTML = ''; // Clear all icons
+        });
+
+        if (currentSortColumn) {
+            const activeIcon = document.querySelector(`.sort-icon[data-sort-for="${currentSortColumn}"]`);
+            if (activeIcon) {
+                activeIcon.innerHTML = currentSortDirection === 'asc' ? '&#9650;' : '&#9660;'; // Up or Down arrow
+            }
+        }
+    }
+
+    // Function to handle header clicks for sorting
+    document.querySelectorAll('th[data-sort-by]').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort-by');
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            sortReports(currentSortColumn, currentSortDirection);
+        });
+    });
+
+    // Function to export data to Excel (XLSX format)
+    async function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor.');
+            return;
+        }
+
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        // Construct query parameters for the Flask endpoint
+        const params = new URLSearchParams({
+            startYear: startYear,
+            endYear: endYear
+        });
+
+        console.log("Exporting to Excel with parameters:", params.toString());
+
+
+        try {
+            const response = await fetch(`/export_auditsi_xlsx?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            const fileName = `Laporan_Audit_SI_Global_${startYear}_to_${endYear}.xlsx`;
+            
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            console.log("Excel export successful!");
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            alert('Terjadi kesalahan saat mengekspor data ke Excel.');
+        }
+    }
+
+    // --- Chart and Top/Bottom Analysis Functions ---
+
+    function updateVisualizations(reports) {
+        console.log("Updating visualizations with reports:", reports.length);
+
+        // Aggregate data for charts based on the filtered reports
+        const yearlyAggregated = {};
+
+        reports.forEach(report => {
+            const year = report["tahun_laporan"];
+            const jumlahTemuan = report["jumlah_temuan"] || 0;
+            const jumlahTemuanDiselesaikan = report["jumlah_temuan_diselesaikan"] || 0;
+            
+            const confidentiality = report["confidentiality"] || 0;
+            const integrity = report["integrity"] || 0;
+            const availability = report["availability"] || 0;
+            const authenticity = report["authenticity"] || 0;
+            const nonRepudiation = report["non_repudiation"] || 0;
+
+
+            // Yearly aggregation
+            const yearKey = String(year);
+            if (!yearlyAggregated[yearKey]) {
+                yearlyAggregated[yearKey] = {
+                    total_findings: 0,
+                    resolved_findings: 0,
+                    confidentiality_sum: 0,
+                    integrity_sum: 0,
+                    availability_sum: 0,
+                    authenticity_sum: 0,
+                    non_repudiation_sum: 0,
+                    report_count: 0
+                };
+            }
+            yearlyAggregated[yearKey].total_findings += jumlahTemuan;
+            yearlyAggregated[yearKey].resolved_findings += jumlahTemuanDiselesaikan;
+            yearlyAggregated[yearKey].confidentiality_sum += confidentiality;
+            yearlyAggregated[yearKey].integrity_sum += integrity;
+            yearlyAggregated[yearKey].availability_sum += availability;
+            yearlyAggregated[yearKey].authenticity_sum += authenticity;
+            yearlyAggregated[yearKey].non_repudiation_sum += nonRepudiation;
+            yearlyAggregated[yearKey].report_count += 1;
+        });
+
+        console.log("Yearly aggregated data:", yearlyAggregated);
+
+
+        // Prepare data for Yearly Charts
+        const sortedYearlyKeys = Object.keys(yearlyAggregated).sort((a, b) => parseInt(a) - parseInt(b));
+        const yearlyLabels = sortedYearlyKeys;
+        const yearlyTotalFindings = sortedYearlyKeys.map(k => yearlyAggregated[k].total_findings);
+        const yearlyResolvedFindings = sortedYearlyKeys.map(k => yearlyAggregated[k].resolved_findings);
+        
+        const yearlyAvgConfidentiality = sortedYearlyKeys.map(k => yearlyAggregated[k].report_count > 0 ? yearlyAggregated[k].confidentiality_sum / yearlyAggregated[k].report_count : 0);
+        const yearlyAvgIntegrity = sortedYearlyKeys.map(k => yearlyAggregated[k].report_count > 0 ? yearlyAggregated[k].integrity_sum / yearlyAggregated[k].report_count : 0);
+        const yearlyAvgAvailability = sortedYearlyKeys.map(k => yearlyAggregated[k].report_count > 0 ? yearlyAggregated[k].availability_sum / yearlyAggregated[k].report_count : 0);
+        const yearlyAvgAuthenticity = sortedYearlyKeys.map(k => yearlyAggregated[k].report_count > 0 ? yearlyAggregated[k].authenticity_sum / yearlyAggregated[k].report_count : 0);
+        const yearlyAvgNonRepudiation = sortedYearlyKeys.map(k => yearlyAggregated[k].report_count > 0 ? yearlyAggregated[k].non_repudiation_sum / yearlyAggregated[k].report_count : 0);
+
+
+        // Render Yearly Findings Count Chart
+        if (yearlyFindingsCountChartInstance) {
+            yearlyFindingsCountChartInstance.destroy();
+            yearlyFindingsCountChartInstance = null;
+        }
+        const yearlyFindingsCtx = document.getElementById('yearlyFindingsCountChart').getContext('2d');
+        yearlyFindingsCtx.canvas.height = 300;
+        yearlyFindingsCtx.canvas.width = yearlyFindingsCtx.canvas.parentNode.offsetWidth;
+        yearlyFindingsCountChartInstance = new Chart(yearlyFindingsCtx, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [
+                    {
+                        label: 'Total Temuan',
+                        data: yearlyTotalFindings,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)', // Blue
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Temuan Diselesaikan',
+                        data: yearlyResolvedFindings,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)', // Greenish-blue
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Jumlah Temuan' } },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+
+        // Render Yearly CIAAN Chart
+        if (yearlyCIAANChartInstance) {
+            yearlyCIAANChartInstance.destroy();
+            yearlyCIAANChartInstance = null;
+        }
+        const yearlyCIAANCtx = document.getElementById('yearlyCIAANChart').getContext('2d');
+        yearlyCIAANCtx.canvas.height = 300;
+        yearlyCIAANCtx.canvas.width = yearlyCIAANCtx.canvas.parentNode.offsetWidth;
+        yearlyCIAANChartInstance = new Chart(yearlyCIAANCtx, {
+            type: 'line',
+            data: {
+                labels: yearlyLabels,
+                datasets: [
+                    {
+                        label: 'Confidentiality',
+                        data: yearlyAvgConfidentiality,
+                        borderColor: 'rgba(100, 100, 255, 1)', // Light blue
+                        backgroundColor: 'rgba(100, 100, 255, 0.2)',
+                        fill: false, tension: 0.3
+                    },
+                    {
+                        label: 'Integrity',
+                        data: yearlyAvgIntegrity,
+                        borderColor: 'rgba(255, 100, 100, 1)', // Light red
+                        backgroundColor: 'rgba(255, 100, 100, 0.2)',
+                        fill: false, tension: 0.3
+                    },
+                    {
+                        label: 'Availability',
+                        data: yearlyAvgAvailability,
+                        borderColor: 'rgba(100, 255, 100, 1)', // Light green
+                        backgroundColor: 'rgba(100, 255, 100, 0.2)',
+                        fill: false, tension: 0.3
+                    },
+                    {
+                        label: 'Authenticity',
+                        data: yearlyAvgAuthenticity,
+                        borderColor: 'rgba(255, 255, 100, 1)', // Light yellow
+                        backgroundColor: 'rgba(255, 255, 100, 0.2)',
+                        fill: false, tension: 0.3
+                    },
+                    {
+                        label: 'Non-Repudiation',
+                        data: yearlyAvgNonRepudiation,
+                        borderColor: 'rgba(100, 255, 255, 1)', // Light cyan
+                        backgroundColor: 'rgba(100, 255, 255, 0.2)',
+                        fill: false, tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Rata-rata Skor' }, max: 5 }, // Max score is 5
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+
+        // Update Top/Bottom Reports and PJPs
+        const topBottomData = getTopBottomAnalysis(reports);
+        console.log("Top/Bottom Analysis Data:", topBottomData);
+
+        // Laporan Audit SI (individual reports)
+        displayTopBottomLists('topReportsFindingsList', topBottomData.top_5_reports_by_findings, 'jumlah_temuan', 'report', 'jumlah');
+        displayTopBottomLists('bottomReportsFindingsList', topBottomData.bottom_5_reports_by_findings, 'jumlah_temuan', 'report', 'jumlah');
+        displayTopBottomLists('topReportsConfidentialityList', topBottomData.top_5_reports_by_confidentiality, 'confidentiality', 'report', 'score');
+        displayTopBottomLists('bottomReportsConfidentialityList', topBottomData.bottom_5_reports_by_confidentiality, 'confidentiality', 'report', 'score');
+        
+        // PJP (aggregated)
+        displayTopBottomLists('topPJPsFindingsList', topBottomData.top_5_pjps_by_findings, 'total_findings', 'aggregated', 'jumlah');
+        displayTopBottomLists('bottomPJPsFindingsList', topBottomData.bottom_5_pjps_by_findings, 'total_findings', 'aggregated', 'jumlah');
+        displayTopBottomLists('topPJPsConfidentialityList', topBottomData.top_5_pjps_by_confidentiality, 'avg_confidentiality', 'aggregated', 'score');
+        displayTopBottomLists('bottomPJPsConfidentialityList', topBottomData.bottom_5_pjps_by_confidentiality, 'avg_confidentiality', 'aggregated', 'score');
+    }
+
+    // Helper function for Top/Bottom Analysis
+    function getTopBottomAnalysis(reports) {
+        const pjpAggregated = {};        // { "PJP_Name": { "total_findings": N, "confidentiality_sum": X, "report_count": Y } }
+
+        reports.forEach(report => {
+            const pjpName = report["nama_pjp"] || "Tidak Diketahui";
+            const jumlahTemuan = report["jumlah_temuan"] || 0;
+            const confidentiality = report["confidentiality"] || 0;
+
+
+            // Aggregate by PJP
+            if (!pjpAggregated[pjpName]) {
+                pjpAggregated[pjpName] = {
+                    "total_findings": 0,
+                    "confidentiality_sum": 0,
+                    "report_count": 0,
+                    "avg_confidentiality": 0 // Initialize average
+                };
+            }
+            pjpAggregated[pjpName].total_findings += jumlahTemuan;
+            pjpAggregated[pjpName].confidentiality_sum += confidentiality;
+            pjpAggregated[pjpName].report_count += 1;
+            pjpAggregated[pjpName].avg_confidentiality = pjpAggregated[pjpName].report_count > 0 ? pjpAggregated[pjpName].confidentiality_sum / pjpAggregated[pjpName].report_count : 0;
+
+        });
+
+        // Convert to list of (name, data_dict) tuples for PJPs
+        const pjpsList = Object.entries(pjpAggregated);
+
+        // Sort and slice for top/bottom 5 for PJPs by total findings
+        const top5PJPsByFindings = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.total_findings - dataA.total_findings).slice(0, 5);
+        const bottom5PJPsByFindings = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.total_findings - dataB.total_findings).slice(0, 5);
+
+        // Sort and slice for top/bottom 5 for PJPs by average confidentiality score (highest is best)
+        const top5PJPsByConfidentiality = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.avg_confidentiality - dataA.avg_confidentiality).slice(0, 5);
+        const bottom5PJPsByConfidentiality = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.avg_confidentiality - dataB.avg_confidentiality).slice(0, 5);
+
+
+        // --- Top/Bottom Individual Reports ---
+        // Make copies to sort without affecting the original filteredReports
+        const reportsByFindings = [...reports];
+        const reportsByConfidentiality = [...reports];
+
+        // Sort by jumlah_temuan
+        const top5ReportsByFindings = reportsByFindings.sort((a, b) => b["jumlah_temuan"] - a["jumlah_temuan"]).slice(0, 5);
+        const bottom5ReportsByFindings = reportsByFindings.sort((a, b) => a["jumlah_temuan"] - b["jumlah_temuan"]).slice(0, 5);
+
+        // Sort by confidentiality score (highest is best)
+        const top5ReportsByConfidentiality = reportsByConfidentiality.sort((a, b) => (b["confidentiality"] || 0) - (a["confidentiality"] || 0)).slice(0, 5);
+        const bottom5ReportsByConfidentiality = reportsByConfidentiality.sort((a, b) => (a["confidentiality"] || 0) - (b["confidentiality"] || 0)).slice(0, 5);
+
+        return {
+            top_5_reports_by_findings: top5ReportsByFindings,
+            bottom_5_reports_by_findings: bottom5ReportsByFindings,
+            top_5_reports_by_confidentiality: top5ReportsByConfidentiality,
+            bottom_5_reports_by_confidentiality: bottom5ReportsByConfidentiality,
+            top_5_pjps_by_findings: top5PJPsByFindings,
+            bottom_5_pjps_by_findings: bottom5PJPsByFindings,
+            top_5_pjps_by_confidentiality: top5PJPsByConfidentiality,
+            bottom_5_pjps_by_confidentiality: bottom5PJPsByConfidentiality,
+        };
+    }
+
+    // Helper function to display top/bottom lists
+    function displayTopBottomLists(elementId, data, valueKey, dataType, valueType) { // valueType: 'jumlah' or 'score' or 'nominal'
+        const listElement = document.getElementById(elementId);
+        listElement.innerHTML = '';
+        if (data.length === 0) {
+            listElement.innerHTML = '<li>Tidak ada data.</li>';
+            return;
+        }
+        data.forEach(item => {
+            const listItem = document.createElement('li');
+            let name, displayValue;
+
+            if (dataType === 'report') {
+                // Item is a full report object
+                name = `${item["nama_pjp"]} (${item["tahun_laporan"]})`; // For annual reports, just year
+                displayValue = item[valueKey];
+            } else if (dataType === 'aggregated') {
+                // Item is an array [name, data_object] from Object.entries
+                name = item[0];
+                displayValue = item[1][valueKey];
+            }
+
+            if (valueType === 'nominal') {
+                displayValue = formatCurrency(displayValue);
+            } else if (valueType === 'jumlah') {
+                displayValue = `${displayValue} temuan`;
+            } else if (valueType === 'score') {
+                displayValue = `${displayValue.toFixed(2)} / 5`; // Format score out of 5
+            }
+            
+            listItem.textContent = `${name}: ${displayValue}`;
+            listElement.appendChild(listItem);
+        });
+    }
+
+    // Function to update KPI cards
+    function updateKPIs(reports) {
+        console.log("Updating KPIs with reports:", reports.length); // Debug log
+        const totalFindings = reports.reduce((sum, report) => sum + (report["jumlah_temuan"] || 0), 0);
+        const totalResolvedFindings = reports.reduce((sum, report) => sum + (report["jumlah_temuan_diselesaikan"] || 0), 0);
+        const totalReports = reports.length;
+
+        const percentageResolved = totalFindings > 0 ? (totalResolvedFindings / totalFindings * 100) : 0;
+        const avgFindingsPerReport = totalReports > 0 ? totalFindings / totalReports : 0;
+
+        // Calculate average CIAAN scores
+        const totalConfidentiality = reports.reduce((sum, report) => sum + (report["confidentiality"] || 0), 0);
+        const totalIntegrity = reports.reduce((sum, report) => sum + (report["integrity"] || 0), 0);
+        const totalAvailability = reports.reduce((sum, report) => sum + (report["availability"] || 0), 0);
+        const totalAuthenticity = reports.reduce((sum, report) => sum + (report["authenticity"] || 0), 0);
+        const totalNonRepudiation = reports.reduce((sum, report) => sum + (report["non_repudiation"] || 0), 0);
+
+        const avgConfidentiality = totalReports > 0 ? totalConfidentiality / totalReports : 0;
+        const avgIntegrity = totalReports > 0 ? totalIntegrity / totalReports : 0;
+        const avgAvailability = totalReports > 0 ? totalAvailability / totalReports : 0;
+        const avgAuthenticity = totalReports > 0 ? totalAuthenticity / totalReports : 0;
+        const avgNonRepudiation = totalReports > 0 ? totalNonRepudiation / totalReports : 0;
+
+        // Update KPI elements
+        document.getElementById('totalFindingsKpi').textContent = totalFindings.toLocaleString('id-ID');
+        document.getElementById('percentageResolvedKpi').textContent = percentageResolved.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+        document.getElementById('avgFindingsKpi').textContent = avgFindingsPerReport.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        // Ensure these elements exist in HTML before setting textContent
+        const totalReportsKpiElement = document.getElementById('totalReportsKpi');
+        if (totalReportsKpiElement) {
+            totalReportsKpiElement.textContent = totalReports.toLocaleString('id-ID');
+        }
+
+        document.getElementById('avgConfidentialityKpi').textContent = avgConfidentiality.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('avgIntegrityKpi').textContent = avgIntegrity.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('avgAvailabilityKpi').textContent = avgAvailability.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        // Ensure these new elements exist in HTML before setting textContent
+        const avgAuthenticityKpiElement = document.getElementById('avgAuthenticityKpi');
+        if (avgAuthenticityKpiElement) {
+            avgAuthenticityKpiElement.textContent = avgAuthenticity.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        const avgNonRepudiationKpiElement = document.getElementById('avgNonRepudiationKpi');
+        if (avgNonRepudiationKpiElement) {
+            avgNonRepudiationKpiElement.textContent = avgNonRepudiation.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+
+        console.log("KPI Values - Total Findings:", totalFindings); // Debug log
+        console.log("KPI Values - Percentage Resolved:", percentageResolved); // Debug log
+        console.log("KPI Values - Avg Findings per Report:", avgFindingsPerReport); // Debug log
+        console.log("KPI Values - Total Reports:", totalReports); // Debug log
+        console.log("KPI Values - Avg Confidentiality:", avgConfidentiality); // Debug log
+        console.log("KPI Values - Avg Integrity:", avgIntegrity); // Debug log
+        console.log("KPI Values - Avg Availability:", avgAvailability); // Debug log
+        console.log("KPI Values - Avg Authenticity:", avgAuthenticity); // Debug log
+        console.log("KPI Values - Avg Non-Repudiation:", avgNonRepudiation); // Debug log
+    }
+
+    // --- Pagination Functions ---
+    function renderPaginationControls(totalReports) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = ''; // Clear existing controls
+
+        const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(totalReports / rowsPerPage);
+        const paginationInfo = document.getElementById('paginationInfo');
+
+        if (totalReports === 0) {
+            paginationInfo.textContent = 'Menampilkan 0 dari 0 data';
+            return;
+        }
+
+        const startEntry = (currentPage - 1) * rowsPerPage + 1;
+        const endEntry = rowsPerPage === 'all' ? totalReports : Math.min(currentPage * rowsPerPage, totalReports);
+        paginationInfo.textContent = `Menampilkan ${startEntry}-${endEntry} dari ${totalReports} data`;
+
+        if (totalPages <= 1) {
+            return; // No need for pagination if only one page
+        }
+
+        // Previous button
+        const prevButton = document.createElement('li');
+        prevButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}">Previous</a>`;
+        prevButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(prevButton);
+
+        // Page numbers
+        const maxPageButtons = 5; // Max number of page buttons to show
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('li');
+            pageButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ${i === currentPage ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700' : ''}">${i}</a>`;
+            pageButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentPage = i;
+                populateTable(currentFilteredReports);
+            });
+            paginationControls.appendChild(pageButton);
+        }
+
+        // Next button
+        const nextButton = document.createElement('li');
+        nextButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}">Next</a>`;
+        nextButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(nextButton);
+    }
+
+
+    // Event listener for rows per page change
+    document.getElementById('rowsPerPage').addEventListener('change', function() {
+        rowsPerPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1; // Reset to first page when rows per page changes
+        populateTable(currentFilteredReports);
+    });
+
+    // Add event listener for export button
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+    // Add event listener for the new Filter button
+    document.getElementById('applyFilterBtn').addEventListener('click', filterReports);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        populateYearFilters(); // Populate years first
+        filterReports();      // Apply initial filter (which also populates the table and visualizations)
+    });
+</script>
+
+{% endblock %}

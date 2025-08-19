@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan Gangguan IT - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard Gangguan IT -->
+    <div class="mb-6">
+        <a href="{{ url_for('gangguanit_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard Gangguan IT
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Gangguan IT</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">
+        Tanggal Kejadian: {{ report_data.get('tanggal_laporan', 'N/A') }}/{{ report_data.get('bulan_laporan', 'N/A') }}/{{ report_data.get('tahun_laporan', 'N/A') }}
+        {% if report_data.get('nomor_surat') %} (No. Surat: {{ report_data.get('nomor_surat') }}) {% endif %}
+    </h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report_data.get('nomor_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data.get('tanggal_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Waktu Kejadian:</span> {{ report_data.get('waktu_kejadian', 'N/A') }}</p>
+                        <p><span class="font-semibold">Jenis Gangguan:</span> {{ report_data.get('jenis_gangguan', 'N/A') }}</p>
+                        <p><span class="font-semibold">Potensi Kerugian:</span> Rp {{ "{:,.0f}".format(report_data.get('potensi_kerugian', 0)) }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Ringkasan:</span> {{ report_data.get('ringkasan', 'N/A') }}</p>
+                        <p><span class="font-semibold">Upaya Perbaikan:</span> {{ report_data.get('upaya_perbaikan', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Penyelesaian:</span> {{ report_data.get('tanggal_penyelesaian', 'N/A') }}</p>
+                        <p><span class="font-semibold">Created at:</span> {{ report_data.get('created_at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Perbandingan 5 Insiden Terakhir -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Insiden (5 Insiden Terakhir)</h4>
+                <div class="w-full h-64">
+                    <canvas id="incidentTrend5IncidentsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) and Yearly Comparison -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Perbandingan Tahunan (Jenis Gangguan yang Sama) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
+                    Perbandingan Tahunan (Jenis Gangguan: {{ report_data.get('jenis_gangguan', 'N/A') }})
+                </h4>
+                <div class="w-full h-64">
+                    <canvas id="yearlyIncidentTypeComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report_data.get('file_url') and report_data.get('file_url') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden">
+                        <iframe src="{{ report_data.get('file_url') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report_data.get('file_url') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="report-data">
+    {{ report_data | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-5-incidents-data">
+    {{ comparison_data_5_incidents | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-same-type-yearly-data">
+    {{ comparison_same_type_yearly | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        let report;
+        let comparisonData5Incidents;
+        let comparisonSameTypeYearly;
+
+        try {
+            report = JSON.parse(document.getElementById('report-data').textContent.trim());
+            console.log("Parsed report data:", report);
+        } catch (e) {
+            console.error("Error parsing report JSON:", e);
+            report = {};
+        }
+
+        try {
+            comparisonData5Incidents = JSON.parse(document.getElementById('comparison-5-incidents-data').textContent.trim());
+            console.log("Parsed comparisonData5Incidents:", comparisonData5Incidents);
+        } catch (e) {
+            console.error("Error parsing comparisonData5Incidents JSON:", e);
+            comparisonData5Incidents = [];
+        }
+
+        try {
+            comparisonSameTypeYearly = JSON.parse(document.getElementById('comparison-same-type-yearly-data').textContent.trim());
+            console.log("Parsed comparisonSameTypeYearly:", comparisonSameTypeYearly);
+        } catch (e) {
+            console.error("Error parsing comparisonSameTypeYearly JSON:", e);
+            comparisonSameTypeYearly = [];
+        }
+
+        // Helper to format currency
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper to get month name from month number
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        function getMonthName(monthNumStr) {
+            return monthNames[parseInt(monthNumStr, 10) - 1];
+        }
+
+        // --- Grafik Garis: Tren Insiden (5 Insiden Terakhir) ---
+        const labels5Incidents = comparisonData5Incidents.map(d => {
+            const date = new Date(d['waktu_kejadian'].split('T')[0]);
+            return `${d['tanggal_laporan']}/${d['bulan_laporan']}/${d['tahun_laporan']} (${d['jenis_gangguan']})`;
+        });
+        const potensiKerugian5Incidents = comparisonData5Incidents.map(d => d['potensi_kerugian']);
+
+        const currentReportLabel = `${report['tanggal_laporan']}/${report['bulan_laporan']}/${report['tahun_laporan']} (${report['jenis_gangguan']})`;
+        const currentReportIndex5Incidents = labels5Incidents.indexOf(currentReportLabel);
+
+        const pointStyle5Incidents = new Array(labels5Incidents.length).fill('circle');
+        const pointRadius5Incidents = new Array(labels5Incidents.length).fill(3);
+        const pointBackgroundColor = new Array(labels5Incidents.length).fill('rgb(75, 192, 192)');
+        const pointBorderColor = new Array(labels5Incidents.length).fill('rgb(75, 192, 192)');
+
+        if (currentReportIndex5Incidents !== -1) {
+            pointStyle5Incidents[currentReportIndex5Incidents] = 'star';
+            pointRadius5Incidents[currentReportIndex5Incidents] = 8;
+            pointBackgroundColor[currentReportIndex5Incidents] = 'rgb(255, 205, 86)';
+            pointBorderColor[currentReportIndex5Incidents] = 'rgb(255, 159, 64)';
+        }
+
+        const ctx5Incidents = document.getElementById('incidentTrend5IncidentsChart').getContext('2d');
+        new Chart(ctx5Incidents, {
+            type: 'line',
+            data: {
+                labels: labels5Incidents,
+                datasets: [
+                    {
+                        label: 'Potensi Kerugian (Rp)',
+                        data: potensiKerugian5Incidents,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: (context) => {
+                            const index = context.dataIndex;
+                            if (index === currentReportIndex5Incidents) {
+                                return 'rgba(255, 99, 132, 0.5)';
+                            }
+                            return 'rgba(255, 99, 132, 0.0)';
+                        },
+                        tension: 0.1,
+                        yAxisID: 'y-loss',
+                        pointStyle: pointStyle5Incidents,
+                        radius: pointRadius5Incidents,
+                        pointBackgroundColor: pointBackgroundColor,
+                        pointBorderColor: pointBorderColor,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportIndex5Incidents) {
+                                    return `Potensi Kerugian Insiden Ini: ${formatRupiah(context.raw)}`;
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatRupiah(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Insiden (Tanggal & Jenis)' } },
+                    'y-loss': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Potensi Kerugian (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // --- Grafik Batang: Perbandingan Tahunan (Jenis Gangguan yang Sama) ---
+        const yearlyLabels = comparisonSameTypeYearly.map(d => d['tahun_laporan']);
+        const yearlyIncidentsData = comparisonSameTypeYearly.map(d => d['total_incidents']);
+        const yearlyLossData = comparisonSameTypeYearly.map(d => d['total_loss']);
+
+        const currentReportYearIndex = yearlyLabels.indexOf(report['tahun_laporan']);
+
+        const backgroundColorIncidents = new Array(yearlyLabels.length).fill('rgba(54, 162, 235, 0.7)');
+        const backgroundColorLoss = new Array(yearlyLabels.length).fill('rgba(255, 159, 64, 0.7)');
+        const borderColor = new Array(yearlyLabels.length).fill('rgba(54, 162, 235, 1)');
+
+        if (currentReportYearIndex !== -1) {
+            backgroundColorIncidents[currentReportYearIndex] = 'rgba(0, 128, 0, 0.9)'; // Green for current year incidents
+            backgroundColorLoss[currentReportYearIndex] = 'rgba(255, 0, 0, 0.9)'; // Red for current year loss
+            borderColor[currentReportYearIndex] = 'rgba(255, 255, 255, 1)'; // White border
+        }
+
+        const ctxYearly = document.getElementById('yearlyIncidentTypeComparisonChart').getContext('2d');
+        new Chart(ctxYearly, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Insiden',
+                        data: yearlyIncidentsData,
+                        backgroundColor: backgroundColorIncidents,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        yAxisID: 'y-incidents'
+                    },
+                    {
+                        label: 'Potensi Kerugian (Rp)',
+                        data: yearlyLossData,
+                        backgroundColor: backgroundColorLoss,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        yAxisID: 'y-loss'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportYearIndex) {
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        return `Potensi Kerugian Tahun Ini: ${formatRupiah(context.raw)}`;
+                                    } else {
+                                        return `Jumlah Insiden Tahun Ini: ${context.raw}`;
+                                    }
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        label += formatRupiah(context.raw);
+                                    } else {
+                                        label += context.raw;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    'y-incidents': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Insiden' },
+                        ticks: { precision: 0 }
+                    },
+                    'y-loss': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Potensi Kerugian (Rp)' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

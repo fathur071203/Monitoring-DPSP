@@ -1,0 +1,1029 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan DTTOT - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard DTTOT -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan DTTOT</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Awal:</label>
+            <select id="startMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}">{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Akhir:</label>
+            <select id="endMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}" {% if loop.last %}selected{% endif %}>{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Terduga Teroris</p>
+            <p id="kpiTotalDTTOT" class="text-3xl font-bold text-gray-800 mt-1">{{ kpis.total_terduga_teroris }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Organisasi Teroris Paling Umum</p>
+            <p id="kpiMostCommonOrg" class="text-xl font-bold text-gray-800 mt-1">{{ kpis.most_common_org }}</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Time Series) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Terduga Teroris per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="dttotTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Jumlah Terduga Teroris per Tahun</h3>
+            <div class="w-full h-80">
+                <canvas id="yearlyDTTOTChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- D. TOP INSIGHT SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Top 5 Bulan dengan Jumlah Terduga Teroris Tertinggi</h3>
+            <div class="w-full h-80">
+                <canvas id="topDTTOTMonthsChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Organisasi Teroris (Periode Terpilih)</h3>
+            <div class="w-full h-80">
+                <canvas id="orgDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- E. HEATMAP MATRIX: Jumlah DTTOT Bulanan per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Jumlah Terduga Teroris Bulanan per Tahun</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Upload Laporan DTTOT Bulanan</h3>
+        <div class="overflow-x-auto">
+            <table id="uploadStatusTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- F. AUTO GENERATED INSIGHT -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan DTTOT -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan DTTOT</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat Kepolisian</th>
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th>
+                        <th class="py-3 px-6 text-left">Periode</th>
+                        <th class="py-3 px-6 text-left">Jumlah Terduga Teroris</th>
+                        <th class="py-3 px-6 text-left">Organisasi Teroris</th>
+                        <th class="py-3 px-6 text-left">Keterangan</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Removed the hidden div and replaced with script tags for robust JSON passing #}
+<script type="application/json" id="all-dttot-reports-data">
+    {{ initial_dashboard_data_dttot | tojson | safe }}
+</script>
+<script type="application/json" id="available-years-data">
+    {{ available_years | tojson | safe }}
+</script>
+<script type="application/json" id="kpis-data">
+    {{ kpis | tojson | safe }}
+</script>
+<script type="application/json" id="monthly-upload-status-data">
+    {{ monthly_upload_status_dttot | tojson | safe }}
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script type="text/javascript">
+    // Global variables for charts to allow updating them
+    let dttotTrendChartInstance;
+    let yearlyDTTOTChartInstance;
+    let topDTTOTMonthsChartInstance;
+    let orgDistributionChartInstance;
+
+    // Data from Flask backend (all raw data for client-side filtering)
+    // Read data from script tags instead of data-attributes
+    let allDTTOTReports;
+    let availableYearsInitial;
+    let kpisInitial;
+    let monthlyUploadStatusData;
+
+    try {
+        const rawAllReportsText = document.getElementById('all-dttot-reports-data').textContent;
+        console.log("Raw text for allDTTOTReports:", rawAllReportsText); // Log for debugging
+        allDTTOTReports = JSON.parse(rawAllReportsText);
+        console.log("Parsed allDTTOTReports:", allDTTOTReports, "Type:", typeof allDTTOTReports, "Is Array:", Array.isArray(allDTTOTReports)); // More detailed log
+    } catch (e) {
+        console.error("Error parsing allDTTOTReports JSON:", e);
+        allDTTOTReports = []; // Ensure it's always an array on error
+    }
+
+    try {
+        const rawAvailableYearsText = document.getElementById('available-years-data').textContent;
+        console.log("Raw text for availableYearsInitial:", rawAvailableYearsText); // Log for debugging
+        availableYearsInitial = JSON.parse(rawAvailableYearsText);
+        console.log("Parsed availableYearsInitial:", availableYearsInitial, "Type:", typeof availableYearsInitial, "Is Array:", Array.isArray(availableYearsInitial)); // More detailed log
+    } catch (e) {
+        console.error("Error parsing availableYearsInitial JSON:", e);
+        availableYearsInitial = []; // Ensure it's always an array on error
+    }
+
+    try {
+        const rawKpisText = document.getElementById('kpis-data').textContent;
+        console.log("Raw text for kpisInitial:", rawKpisText); // Log for debugging
+        kpisInitial = JSON.parse(rawKpisText);
+        console.log("Parsed kpisInitial:", kpisInitial, "Type:", typeof kpisInitial); // More detailed log
+    } catch (e) {
+        console.error("Error parsing kpisInitial JSON:", e);
+        kpisInitial = {}; // Ensure it's always an object on error
+    }
+
+    try {
+        const rawMonthlyStatusText = document.getElementById('monthly-upload-status-data').textContent;
+        console.log("Raw text for monthlyUploadStatusData:", rawMonthlyStatusText); // Log for debugging
+        monthlyUploadStatusData = JSON.parse(rawMonthlyStatusText);
+        console.log("Parsed monthlyUploadStatusData:", monthlyUploadStatusData, "Type:", typeof monthlyUploadStatusData); // More detailed log
+    } catch (e) {
+        console.error("Error parsing monthlyUploadStatusData JSON:", e);
+        monthlyUploadStatusData = {}; // Ensure it's always an object on error
+    }
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                return monthInput;
+            }
+        }
+        return monthInput;
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            if (!isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+        }
+        return 0; // Default to 0 if not found
+    }
+
+    const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    function getMonthShortName(monthInput) {
+        const monthMapShort = {
+            "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "Mei", "06": "Jun",
+            "07": "Jul", "08": "Agu", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Des",
+            "Januari": "Jan", "Februari": "Feb", "Maret": "Mar", "April": "Apr", "Mei": "Mei", "Juni": "Jun",
+            "Juli": "Jul", "Agustus": "Agu", "September": "Sep", "Oktober": "Okt", "November": "Nov", "Desember": "Des"
+        };
+        return monthMapShort[monthInput] || monthInput;
+    }
+
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        console.log("populateYearDropdowns: Checking allDTTOTReports type at start:", typeof allDTTOTReports, "Is Array:", Array.isArray(allDTTOTReports)); // New log
+        if (!Array.isArray(allDTTOTReports)) {
+            console.error("populateYearDropdowns: allDTTOTReports is not an array. Cannot populate year dropdowns.");
+            // Fallback to initial available years if allDTTOTReports is not an array
+            const uniqueYears = [...new Set(availableYearsInitial)].sort((a, b) => a - b);
+            
+            const startYearSelect = document.getElementById('startYear');
+            const endYearSelect = document.getElementById('endYear');
+            startYearSelect.innerHTML = '';
+            endYearSelect.innerHTML = '';
+
+            if (uniqueYears.length > 0) {
+                uniqueYears.forEach(year => {
+                    const optionStart = document.createElement('option');
+                    optionStart.value = year;
+                    optionStart.textContent = year;
+                    startYearSelect.appendChild(optionStart);
+
+                    const optionEnd = document.createElement('option');
+                    optionEnd.value = year;
+                    optionEnd.textContent = year;
+                    endYearSelect.appendChild(optionEnd);
+                });
+                startYearSelect.value = uniqueYears[0];
+                endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+                startYearSelect.disabled = false;
+                endYearSelect.disabled = false;
+            } else {
+                startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+                endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+                startYearSelect.disabled = true;
+                endYearSelect.disabled = true;
+            }
+            return; // Exit function
+        }
+
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const availableYearsRaw = allDTTOTReports.map(report => report["tahun_laporan"]);
+        const uniqueYears = [...new Set(availableYearsRaw)].sort((a, b) => a - b);
+
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        console.log("renderDashboard: Starting dashboard render. Checking allDTTOTReports type:", typeof allDTTOTReports, "Is Array:", Array.isArray(allDTTOTReports)); // New log
+        if (!Array.isArray(allDTTOTReports) || allDTTOTReports.length === 0) {
+             console.warn("renderDashboard: No DTTOT reports data available or data is not an array. Skipping dashboard rendering.");
+             // Optionally, display a message to the user that no data is available
+             document.getElementById('kpiTotalDTTOT').textContent = 'N/A';
+             document.getElementById('kpiMostCommonOrg').textContent = 'N/A';
+             document.getElementById('reportsTableBody').innerHTML = '<tr><td colspan="8" class="py-3 px-6 text-center text-gray-500">Tidak ada data laporan DTTOT.</td></tr>';
+             document.getElementById('heatmapTable').querySelector('tbody').innerHTML = '<tr><td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td></tr>';
+             document.getElementById('uploadStatusTable').querySelector('tbody').innerHTML = '<tr><td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td></tr>';
+             generateSummaryInsight([]); // Call with empty array to show "no data" message
+             return;
+        }
+
+
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startMonthNum = parseInt(document.getElementById('startMonth').value);
+        const endMonthNum = parseInt(document.getElementById('endMonth').value);
+
+        let filteredReports = allDTTOTReports.filter(report => {
+            const reportYear = parseInt(report["tahun_laporan"]);
+            const reportMonthNum = getMonthNumber(report["periode_laporan"]);
+
+            if (reportYear < startYear || reportYear > endYear) {
+                return false;
+            }
+
+            if (reportYear === startYear && reportMonthNum < startMonthNum) {
+                return false;
+            }
+            if (reportYear === endYear && reportMonthNum > endMonthNum) {
+                return false;
+            }
+            
+            return true;
+        });
+
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["tahun_laporan"], getMonthNumber(a["periode_laporan"]) - 1);
+            const dateB = new Date(b["tahun_laporan"], getMonthNumber(b["periode_laporan"]) - 1);
+            return dateA - dateB;
+        });
+
+        currentFilteredReports = filteredReports;
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateYearlyDTTOTChart(filteredReports);
+        updateTopDTTOTMonths(filteredReports);
+        updateOrgDistribution(filteredReports);
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+        updateUploadStatusMap();
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalDTTOT = data.reduce((sum, report) => sum + report["jumlah_terduga_teroris"], 0);
+        document.getElementById('kpiTotalDTTOT').textContent = totalDTTOT;
+
+        const orgCounts = {};
+        data.forEach(report => {
+            const org = report.organisasi_teroris || "Tidak Diketahui"; // Access directly as object
+            orgCounts[org] = (orgCounts[org] || 0) + 1;
+        });
+
+        let mostCommonOrg = "N/A";
+        if (Object.keys(orgCounts).length > 0) {
+            mostCommonOrg = Object.keys(orgCounts).reduce((a, b) => orgCounts[a] > orgCounts[b] ? a : b);
+        }
+        document.getElementById('kpiMostCommonOrg').textContent = mostCommonOrg;
+    }
+
+    // C. VISUALISASI UTAMA (Time Series)
+    function updateCharts(data) {
+        const aggregatedData = {};
+        data.forEach(report => {
+            const label = `${getMonthShortName(report["periode_laporan"])} ${report["tahun_laporan"]}`;
+            if (!aggregatedData[label]) {
+                aggregatedData[label] = { 'jumlah_terduga_teroris': 0, date: new Date(report["tahun_laporan"], getMonthNumber(report["periode_laporan"]) - 1) };
+            }
+            aggregatedData[label]['jumlah_terduga_teroris'] += report["jumlah_terduga_teroris"];
+        });
+
+        const sortedAggregatedData = Object.keys(aggregatedData)
+            .map(key => ({ label: key, ...aggregatedData[key] }))
+            .sort((a, b) => a.date - b.date);
+
+        const chartLabels = sortedAggregatedData.map(item => item.label);
+        const chartJumlahDTTOT = sortedAggregatedData.map(item => item['jumlah_terduga_teroris']);
+
+        if (dttotTrendChartInstance) {
+            dttotTrendChartInstance.destroy();
+        }
+        const ctx1 = document.getElementById('dttotTrendChart').getContext('2d');
+        dttotTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Jumlah Terduga Teroris',
+                    data: chartJumlahDTTOT,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Terduga Teroris' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    // New function for Yearly DTTOT Chart
+    function updateYearlyDTTOTChart(data) {
+        const yearlyData = {};
+        data.forEach(report => {
+            const year = report["tahun_laporan"];
+            if (!yearlyData[year]) {
+                yearlyData[year] = { 'jumlah_terduga_teroris': 0 };
+            }
+            yearlyData[year]['jumlah_terduga_teroris'] += report["jumlah_terduga_teroris"];
+        });
+
+        const sortedYearlyData = Object.keys(yearlyData)
+            .map(year => ({ year: year, ...yearlyData[year] }))
+            .sort((a, b) => a.year - b.year);
+
+        const chartLabels = sortedYearlyData.map(item => item.year);
+        const chartJumlahDTTOT = sortedYearlyData.map(item => item['jumlah_terduga_teroris']);
+
+        if (yearlyDTTOTChartInstance) {
+            yearlyDTTOTChartInstance.destroy();
+        }
+        const ctx2 = document.getElementById('yearlyDTTOTChart').getContext('2d');
+        yearlyDTTOTChartInstance = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Jumlah Terduga Teroris per Tahun',
+                    data: chartJumlahDTTOT,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Terduga Teroris' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    // D. TOP INSIGHT SECTION Update
+    function updateTopDTTOTMonths(data) {
+        const monthlySummary = {};
+        data.forEach(report => {
+            const key = `${getMonthName(report['periode_laporan'])} ${report['tahun_laporan']}`;
+            if (!monthlySummary[key]) {
+                monthlySummary[key] = { dttot: 0, date: new Date(report["tahun_laporan"], getMonthNumber(report["periode_laporan"]) - 1) };
+            }
+            monthlySummary[key].dttot += report["jumlah_terduga_teroris"];
+        });
+
+        const sortedMonthlySummary = Object.keys(monthlySummary)
+            .map(key => ({ label: key, dttot: monthlySummary[key].dttot, date: monthlySummary[key].date }));
+
+        const top5DTTOT = [...sortedMonthlySummary].sort((a, b) => b.dttot - a.dttot).slice(0, 5);
+        const top5DTTOTLabels = top5DTTOT.map(item => item.label);
+        const top5DTTOTData = top5DTTOT.map(item => item.dttot);
+
+        if (topDTTOTMonthsChartInstance) {
+            topDTTOTMonthsChartInstance.destroy();
+        }
+        const ctx3 = document.getElementById('topDTTOTMonthsChart').getContext('2d');
+        topDTTOTMonthsChartInstance = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: top5DTTOTLabels,
+                datasets: [{
+                    label: 'Jumlah Terduga Teroris',
+                    data: top5DTTOTData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Jumlah Terduga Teroris' }, ticks: { precision: 0 } },
+                    y: { title: { display: true, text: 'Bulan-Tahun' } }
+                }
+            }
+        });
+    }
+
+    function updateOrgDistribution(data) {
+        const orgCounts = {};
+        data.forEach(report => {
+            const org = report.organisasi_teroris || "Tidak Diketahui";
+            orgCounts[org] = (orgCounts[org] || 0) + 1;
+        });
+
+        const chartLabels = Object.keys(orgCounts);
+        const chartData = Object.values(orgCounts);
+
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 205, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 159, 64, 0.7)'
+        ];
+
+        if (orgDistributionChartInstance) {
+            orgDistributionChartInstance.destroy();
+        }
+        const ctx4 = document.getElementById('orgDistributionChart').getContext('2d');
+        new Chart(ctx4, {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // E. HEATMAP MATRIX Update
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { monthName: dttotCount } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["tahun_laporan"];
+            const monthName = getMonthName(report["periode_laporan"]);
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            heatmapData[year][monthName] = (heatmapData[year][monthName] || 0) + report["jumlah_terduga_teroris"];
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const monthsFullNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = '';
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            monthsFullNames.forEach(monthName => {
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                const dttotCount = heatmapData[year] ? (heatmapData[year][monthName] || 0) : 0;
+                cell.textContent = dttotCount;
+
+                let bgColor = 'bg-white';
+                if (dttotCount > 0) {
+                    if (dttotCount >= 5) bgColor = 'bg-red-200';
+                    else if (dttotCount >= 2) bgColor = 'bg-yellow-200';
+                    else bgColor = 'bg-blue-100';
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Terduga Teroris: ${dttotCount} kasus`;
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // NEW: Function to update the Upload Status Map
+    function updateUploadStatusMap() {
+        const uploadStatusTableBody = document.getElementById('uploadStatusTable').querySelector('tbody');
+        uploadStatusTableBody.innerHTML = '';
+
+        const years = Object.keys(monthlyUploadStatusData)
+            .map(key => parseInt(key.split('-')[0]))
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .sort((a, b) => a - b);
+
+        const monthsFullNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            monthsFullNames.forEach(monthName => {
+                const periodKey = `${year}-${monthName}`; 
+                const status = monthlyUploadStatusData[periodKey];
+
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+
+                let cellContent = '';
+                let bgColor = 'bg-white';
+                let tooltipText = '';
+
+                if (status) {
+                    if (status.uploaded) {
+                        if (status.days_late > 0) {
+                            bgColor = 'bg-orange-100';
+                            cellContent = `Terlambat (${status.days_late} hari)`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                        } else {
+                            bgColor = 'bg-green-100';
+                            cellContent = `Tepat Waktu`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Tepat Waktu)`;
+                        }
+                    } else {
+                        if (status.days_late !== null && status.days_late > 0) {
+                            bgColor = 'bg-red-200';
+                            cellContent = `Belum Upload (${status.days_late} hari)`;
+                            tooltipText = `Belum Upload. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                        } else {
+                            bgColor = 'bg-gray-100';
+                            cellContent = 'Belum Upload';
+                            tooltipText = `Belum Upload. Jatuh Tempo: ${status.due_date}`;
+                        }
+                    }
+                } else {
+                    cellContent = 'N/A';
+                    tooltipText = 'Data tidak tersedia';
+                }
+
+                cell.innerHTML = cellContent;
+                cell.classList.add(bgColor);
+                cell.title = tooltipText;
+                row.appendChild(cell);
+            });
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data DTTOT yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const totalDTTOT = data.reduce((sum, report) => sum + report["jumlah_terduga_teroris"], 0);
+
+        const monthlyDTTOT = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['periode_laporan'])} ${report['tahun_laporan']}`;
+            monthlyDTTOT[monthYear] = (monthlyDTTOT[monthYear] || 0) + report["jumlah_terduga_teroris"];
+        });
+
+        let peakDTTOTMonth = "N/A";
+        let peakDTTOTCount = 0;
+        if (Object.keys(monthlyDTTOT).length > 0) {
+            peakDTTOTMonth = Object.keys(monthlyDTTOT).reduce((a, b) => monthlyDTTOT[a] > monthlyDTTOT[b] ? a : b);
+            peakDTTOTCount = monthlyDTTOT[peakDTTOTMonth];
+        }
+
+        const firstReport = data[0];
+        const lastReport = data[data.length - 1];
+        const startDateString = `${getMonthName(firstReport['periode_laporan'])} ${firstReport['tahun_laporan']}`;
+        const endDateString = `${getMonthName(lastReport['periode_laporan'])} ${lastReport['tahun_laporan']}`;
+
+        const monthlySummaryForTrend = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report["periode_laporan"])} ${report["tahun_laporan"]}`;
+            if (!monthlySummaryForTrend[monthYear]) {
+                monthlySummaryForTrend[monthYear] = { count: 0, date: new Date(report["tahun_laporan"], getMonthNumber(report["periode_laporan"]) - 1) };
+            }
+            monthlySummaryForTrend[monthYear].count += report["jumlah_terduga_teroris"];
+        });
+
+        const sortedMonthlySummaryForTrend = Object.keys(monthlySummaryForTrend)
+            .map(key => ({ label: key, count: monthlySummaryForTrend[key].count, date: monthlySummaryForTrend[key].date }))
+            .sort((a, b) => a.date - b.date);
+
+        let maxIncrease = { month: 'N/A', value: 0 };
+        let maxDecrease = { month: 'N/A', value: 0 };
+        let trendInsight = "";
+
+        if (sortedMonthlySummaryForTrend.length > 1) {
+            for (let i = 1; i < sortedMonthlySummaryForTrend.length; i++) {
+                const currentMonthData = sortedMonthlySummaryForTrend[i];
+                const previousMonthData = sortedMonthlySummaryForTrend[i - 1];
+                const change = currentMonthData.count - previousMonthData.count;
+
+                if (change > maxIncrease.value) {
+                    maxIncrease = { month: currentMonthData.label, value: change };
+                }
+                if (change < maxDecrease.value) {
+                    maxDecrease = { month: currentMonthData.label, value: change };
+                }
+            }
+
+            if (maxIncrease.value > 0) {
+                trendInsight += `Peningkatan jumlah terduga teroris terbesar terjadi pada <strong>${maxIncrease.month}</strong> dengan kenaikan <strong>${maxIncrease.value}</strong> kasus dari bulan sebelumnya. `;
+            }
+            if (maxDecrease.value < 0) {
+                trendInsight += `Penurunan jumlah terduga teroris terbesar terjadi pada <strong>${maxDecrease.month}</strong> dengan penurunan <strong>${Math.abs(maxDecrease.value)}</strong> kasus dari bulan sebelumnya.`;
+            }
+            if (trendInsight === "") {
+                trendInsight = "Jumlah terduga teroris cenderung stabil sepanjang periode ini.";
+            }
+        } else if (sortedMonthlySummaryForTrend.length === 1) {
+            trendInsight = "Hanya ada data untuk satu bulan, tidak dapat menganalisis tren.";
+        } else {
+            trendInsight = "";
+        }
+
+        summaryInsightText.innerHTML = `
+            Dalam periode <strong>${startDateString} &ndash; ${endDateString}</strong>, terdapat total <strong>${totalDTTOT}</strong> terduga teroris yang dilaporkan.
+            <br><br>
+            Bulan dengan jumlah terduga teroris terbanyak adalah <strong>${peakDTTOTMonth}</strong> (${peakDTTOTCount} kasus).
+            <br><br>
+            ${trendInsight}
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="8" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan DTTOT yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["tahun_laporan"], getMonthNumber(a["periode_laporan"]) - 1);
+            const dateB = new Date(b["tahun_laporan"], getMonthNumber(b["periode_laporan"]) - 1);
+            return dateB - dateA;
+        });
+
+        const currentSandiPjp = "{{ sandi_pjp }}";
+
+        sortedForTable.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/dttot_report_detail/${report['tahun_laporan']}/${report['periode_laporan']}`;
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['sandi_pjp'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['nomor_surat_kepolisian'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['tanggal_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${getMonthName(report["periode_laporan"])}/${report["tahun_laporan"]}</td>
+                <td class="py-3 px-6 text-left">${report["jumlah_terduga_teroris"]}</td>
+                <td class="py-3 px-6 text-left">${report["organisasi_teroris"]}</td>
+                <td class="py-3 px-6 text-left">${report["keterangan"]}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            showCustomAlert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        const dataForExcel = currentFilteredReports.map(report => ({
+            'Sandi PJP': report['sandi_pjp'],
+            'Nama PJP': "{{ pjp_name }}",
+            'Tahun Laporan': report['tahun_laporan'],
+            'Periode Laporan': getMonthName(report['periode_laporan']),
+            'Nomor Surat Kepolisian': report['nomor_surat_kepolisian'],
+            'Tanggal Surat': report['tanggal_surat'],
+            'Perihal': report['perihal'],
+            'Jumlah Terduga Teroris': report['jumlah_terduga_teroris'],
+            'Organisasi Teroris': report['organisasi_teroris'],
+            'Keterangan': report['keterangan'],
+            'File URL': report['file_url'],
+            'Created At': report['created_at']
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan DTTOT");
+
+        const fileName = `Laporan_DTTOT_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Custom Alert/Modal Function
+    function showCustomAlert(message) {
+        let alertModal = document.getElementById('customAlertModal');
+        if (!alertModal) {
+            alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden';
+            alertModal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <p id="customAlertMessage" class="text-gray-800 text-lg mb-4"></p>
+                    <button id="customAlertCloseBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg float-right">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                alertModal.classList.add('hidden');
+            });
+        }
+        document.getElementById('customAlertMessage').textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        populateYearDropdowns();
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            populateYearDropdowns();
+            document.getElementById('startMonth').value = '01';
+            document.getElementById('endMonth').value = '12';
+            document.getElementById('showInsightCheckbox').checked = false;
+            renderDashboard();
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            renderDashboard();
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+{% endblock %}

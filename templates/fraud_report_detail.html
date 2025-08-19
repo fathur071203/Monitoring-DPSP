@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan Fraud - {{ pjp_name }} ({{ report.get('Nama Periode Laporan', 'N/A') }}/{{ report.get('Tahun Laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard Fraud dipindahkan ke sini -->
+    <div class="mb-6">
+        <a href="{{ url_for('fraud_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard Fraud
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Fraud</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Periode: {{ report.get('Nama Periode Laporan', 'N/A') }} {{ report.get('Tahun Laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report.get('Nomor Surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report.get('Tanggal Surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Jumlah Fraud:</span> {{ report.get('Jumlah Fraud', 0) }}</p>
+                        <p><span class="font-semibold">Besar Potensi Kerugian:</span> Rp {{ "{:,.0f}".format(report.get('Besar Potensi Kerugian', 0)) }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Keterangan Fraud:</span> {{ report.get('Keterangan Fraud', 'N/A') }}</p>
+                        <p><span class="font-semibold">Keterangan Tindak Lanjut:</span> {{ report.get('Keterangan Tindak Lanjut', 'N/A') }}</p>
+                        <p><span class="font-semibold">Created at:</span> {{ report.get('Created at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Perbandingan 5 Bulan Terakhir -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Fraud (5 Bulan Terakhir)</h4>
+                <div class="w-full h-64">
+                    <canvas id="fraudTrend5MonthsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) and Yearly Comparison -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Perbandingan Tahunan (Bulan yang Sama) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
+                    Perbandingan Tahunan (Bulan {{ report.get('Nama Periode Laporan', 'N/A') }} Saja) 
+                    <span class="text-sm text-gray-500">(Bar hijau menunjukkan Jumlah Fraud periode ini, bar merah menunjukkan Potensi Kerugian periode ini)</span>
+                </h4>
+                <div class="w-full h-64">
+                    <canvas id="yearlyComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report.get('File URL') and report.get('File URL') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden"> {# Increased height for better viewing #}
+                        <iframe src="{{ report.get('File URL') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report.get('File URL') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Menghapus bagian tombol "Kembali ke Dashboard Fraud" yang lama #}
+    {#
+    <div class="text-center mt-8">
+        <a href="{{ url_for('fraud_report', sandi=sandi_pjp) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Kembali ke Dashboard Fraud
+        </a>
+    </div>
+    #}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Parse the report data from Jinja to JavaScript.
+        // The 'report' variable from Flask is now a Python dict, so we use |tojson to convert it to a JSON string for JS.
+        const report = JSON.parse('{{ report | tojson | safe }}');
+        const comparisonData5Months = JSON.parse('{{ comparison_data_5_months | safe }}');
+        const comparisonSameMonthYearly = JSON.parse('{{ comparison_same_month_yearly | safe }}');
+
+        // Helper untuk memformat mata uang
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper untuk mendapatkan nama bulan dari nomor bulan (string '01' menjadi 'Januari')
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        function getMonthName(monthNumStr) {
+            return monthNames[parseInt(monthNumStr, 10) - 1];
+        }
+
+        // --- Grafik Garis: Tren Fraud (5 Bulan Terakhir) ---
+        const labels5Months = comparisonData5Months.map(d => `${getMonthName(d['Periode Laporan'])} ${d['Tahun Laporan']}`);
+        const jumlahFraud5Months = comparisonData5Months.map(d => d['Jumlah Fraud']);
+        const potensiKerugian5Months = comparisonData5Months.map(d => d['Besar Potensi Kerugian']);
+
+        // Temukan indeks laporan saat ini dalam data 5 bulan terakhir
+        const currentReportLabel = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+        const currentReportIndex5Months = labels5Months.indexOf(currentReportLabel);
+
+        // Atur gaya titik untuk laporan saat ini
+        const pointStyle5Months = new Array(labels5Months.length).fill('circle');
+        const pointRadius5Months = new Array(labels5Months.length).fill(3);
+        const pointBackgroundColorFraud = new Array(labels5Months.length).fill('rgb(75, 192, 192)'); // Default for fraud
+        const pointBorderColorFraud = new Array(labels5Months.length).fill('rgb(75, 192, 192)'); // Default for fraud
+        const pointBackgroundColorLoss = new Array(labels5Months.length).fill('rgb(255, 99, 132)'); // Default for loss
+        const pointBorderColorLoss = new Array(labels5Months.length).fill('rgb(255, 99, 132)'); // Default for loss
+
+
+        // Atur warna area latar belakang untuk laporan saat ini
+        const backgroundColorFraudArea = new Array(labels5Months.length).fill('rgba(75, 192, 192, 0.0)'); // Transparan
+        const backgroundColorLossArea = new Array(labels5Months.length).fill('rgba(255, 99, 132, 0.0)'); // Transparan
+
+        if (currentReportIndex5Months !== -1) {
+            pointStyle5Months[currentReportIndex5Months] = 'star'; // Ubah menjadi bintang
+            pointRadius5Months[currentReportIndex5Months] = 8; // Perbesar ukuran
+            pointBackgroundColorFraud[currentReportIndex5Months] = 'rgb(255, 205, 86)'; // Warna kuning terang untuk fraud
+            pointBorderColorFraud[currentReportIndex5Months] = 'rgb(255, 159, 64)'; // Border oranye untuk fraud
+            pointBackgroundColorLoss[currentReportIndex5Months] = 'rgb(144, 238, 144)'; // Warna hijau terang untuk loss
+            pointBorderColorLoss[currentReportIndex5Months] = 'rgb(60, 179, 113)'; // Border hijau gelap untuk loss
+
+            // Tambahkan warna latar belakang untuk area laporan saat ini
+            // Untuk grafik garis, kita perlu membuat gradient untuk mengisi area di bawah titik yang di-highlight
+            // Ini akan membutuhkan sedikit penyesuaian pada cara Chart.js menangani warna latar belakang area
+            // Untuk saat ini, kita akan menggunakan warna solid dengan opacity untuk area yang di-highlight
+            backgroundColorFraudArea[currentReportIndex5Months] = 'rgba(75, 192, 192, 0.5)'; // Warna area untuk fraud dengan opacity lebih tinggi
+            backgroundColorLossArea[currentReportIndex5Months] = 'rgba(255, 99, 132, 0.5)'; // Warna area untuk kerugian dengan opacity lebih tinggi
+        }
+
+        const ctx5Months = document.getElementById('fraudTrend5MonthsChart').getContext('2d');
+        new Chart(ctx5Months, {
+            type: 'line',
+            data: {
+                labels: labels5Months,
+                datasets: [
+                    {
+                        label: 'Jumlah Fraud',
+                        data: jumlahFraud5Months,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: (context) => {
+                            // Apply background color only for the highlighted point's area
+                            const index = context.dataIndex;
+                            if (index === currentReportIndex5Months) {
+                                return 'rgba(75, 192, 192, 0.5)'; // Highlighted area color for fraud
+                            }
+                            return 'rgba(75, 192, 192, 0.0)'; // Transparent for others
+                        },
+                        tension: 0.1,
+                        yAxisID: 'y-jumlah',
+                        pointStyle: pointStyle5Months,
+                        radius: pointRadius5Months,
+                        pointBackgroundColor: pointBackgroundColorFraud,
+                        pointBorderColor: pointBorderColorFraud,
+                        fill: true // Aktifkan pengisian area
+                    },
+                    {
+                        label: 'Potensi Kerugian (Rp)',
+                        data: potensiKerugian5Months,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: (context) => {
+                            // Apply background color only for the highlighted point's area
+                            const index = context.dataIndex;
+                            if (index === currentReportIndex5Months) {
+                                return 'rgba(255, 99, 132, 0.5)'; // Highlighted area color for loss
+                            }
+                            return 'rgba(255, 99, 132, 0.0)'; // Transparent for others
+                        },
+                        tension: 0.1,
+                        yAxisID: 'y-kerugian',
+                        pointStyle: pointStyle5Months,
+                        radius: pointRadius5Months,
+                        pointBackgroundColor: pointBackgroundColorLoss,
+                        pointBorderColor: pointBorderColorLoss,
+                        fill: true // Aktifkan pengisian area
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportIndex5Months) {
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        return `Potensi Kerugian Periode Ini: ${formatRupiah(context.raw)}`;
+                                    } else {
+                                        return `Jumlah Fraud Periode Ini: ${context.raw}`;
+                                    }
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        label += formatRupiah(context.raw);
+                                    } else {
+                                        label += context.raw;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    'y-jumlah': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Fraud'
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    },
+                    'y-kerugian': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Potensi Kerugian (Rp)'
+                        },
+                        grid: {
+                            drawOnChartArea: false, // Hanya gambar grid untuk y-jumlah
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatRupiah(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- Grafik Batang: Perbandingan Tahunan (Bulan yang Sama) ---
+        const labelsYearly = comparisonSameMonthYearly.map(d => d['Tahun Laporan']);
+        const jumlahFraudYearly = comparisonSameMonthYearly.map(d => d['Jumlah Fraud']);
+        const potensiKerugianYearly = comparisonSameMonthYearly.map(d => d['Besar Potensi Kerugian']);
+
+        // Temukan indeks tahun laporan saat ini
+        const currentReportYear = report['Tahun Laporan'];
+        const currentReportIndexYearly = labelsYearly.indexOf(currentReportYear);
+
+        // Atur warna latar belakang untuk bar laporan saat ini
+        const backgroundColorFraudYearly = new Array(labelsYearly.length).fill('rgba(54, 162, 235, 0.7)'); // Default biru
+        const backgroundColorLossYearly = new Array(labelsYearly.length).fill('rgba(255, 159, 64, 0.7)'); // Default oranye
+        const borderColorYearly = new Array(labelsYearly.length).fill('rgba(54, 162, 235, 1)'); // Default border biru
+
+        if (currentReportIndexYearly !== -1) {
+            backgroundColorFraudYearly[currentReportIndexYearly] = 'rgba(0, 128, 0, 0.9)'; // Hijau gelap untuk fraud
+            backgroundColorLossYearly[currentReportIndexYearly] = 'rgba(255, 0, 0, 0.9)'; // Merah terang untuk loss
+            borderColorYearly[currentReportIndexYearly] = 'rgba(255, 255, 255, 1)'; // Border putih
+        }
+
+
+        const ctxYearly = document.getElementById('yearlyComparisonChart').getContext('2d');
+        new Chart(ctxYearly, {
+            type: 'bar',
+            data: {
+                labels: labelsYearly,
+                datasets: [
+                    {
+                        label: 'Jumlah Fraud',
+                        data: jumlahFraudYearly,
+                        backgroundColor: backgroundColorFraudYearly,
+                        borderColor: borderColorYearly, // Gunakan border yang sama
+                        borderWidth: 1,
+                        yAxisID: 'y-jumlah'
+                    },
+                    {
+                        label: 'Potensi Kerugian (Rp)',
+                        data: potensiKerugianYearly,
+                        backgroundColor: backgroundColorLossYearly,
+                        borderColor: borderColorYearly, // Gunakan border yang sama
+                        borderWidth: 1,
+                        yAxisID: 'y-kerugian'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportIndexYearly) {
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        return `Potensi Kerugian Periode Ini: ${formatRupiah(context.raw)}`;
+                                    } else {
+                                        return `Jumlah Fraud Periode Ini: ${context.raw}`;
+                                    }
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.dataset.label.includes('Kerugian')) {
+                                        label += formatRupiah(context.raw);
+                                    } else {
+                                        label += context.raw;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tahun Laporan'
+                        }
+                    },
+                    'y-jumlah': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Fraud'
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    },
+                    'y-kerugian': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Potensi Kerugian (Rp)'
+                        },
+                        grid: {
+                            drawOnChartArea: false, // Hanya gambar grid untuk y-jumlah
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatRupiah(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

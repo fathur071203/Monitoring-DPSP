@@ -1,0 +1,812 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Laporan Kerjasama P2P Global{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="flex items-center justify-between mb-8">
+        <a href="{{ url_for('analisis_laporan') }}" class="flex items-center text-blue-600 hover:text-blue-800 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Daftar Laporan
+        </a>
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center flex-grow">Analisis Laporan Kerjasama P2P Global</h1>
+        <div><!-- Placeholder to balance the flex layout --></div>
+    </div>
+
+    <!-- KPI Section -->
+    {# Changed lg:grid-cols-4 to lg:grid-cols-3 to center the three KPIs #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 justify-items-center"> {# Added justify-items-center #}
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total Perusahaan Kerjasama P2P</h3>
+            <p id="totalCooperationKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata Perusahaan Kerjasama P2P per Laporan</h3>
+            <p id="avgCooperationKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Jumlah Laporan Kerjasama P2P</h3>
+            <p id="totalReportsKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center justify-between">
+        <div class="flex flex-wrap items-center mb-4 sm:mb-0 space-y-2 sm:space-y-0 sm:space-x-4">
+            <label class="text-lg font-medium text-gray-700">Periode Awal:</label>
+            <select id="startMonthFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+            </select>
+            <select id="startYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+
+            <label class="text-lg font-medium text-gray-700 ml-4">Periode Akhir:</label>
+            <select id="endMonthFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+            </select>
+            <select id="endYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+            <button id="applyFilterBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center ml-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-filter mr-2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filter
+            </button>
+        </div>
+        <button id="exportExcelBtn"
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mr-2">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/>
+            </svg>
+            Export ke Excel
+        </button>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Perusahaan Kerjasama P2P Bulanan</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="monthlyP2PCooperationChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Perusahaan Kerjasama P2P Tahunan</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyP2PCooperationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top/Bottom Reports and PJPs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-purple-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 Laporan Kerjasama P2P (Jumlah Perusahaan)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topReportsCountList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomReportsCountList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-green-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 PJP (Jumlah Perusahaan Kerjasama P2P)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topPJPsCountList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomPJPsCountList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md"> {# Removed overflow-x-auto from here #}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">Daftar Laporan Kerjasama P2P</h2>
+            <div class="flex items-center">
+                <label for="rowsPerPage" class="text-sm font-medium text-gray-700 mr-2">Baris per halaman:</label>
+                <select id="rowsPerPage" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto"> {# Added overflow-x-auto here to wrap only the table #}
+            <table class="min-w-full divide-y divide-gray-200 w-max" id="p2pTable"> {# Added w-max class #}
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="Tahun Laporan">
+                            Tahun <span class="sort-icon" data-sort-for="Tahun Laporan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="Periode Luler">
+                            Periode <span class="sort-icon" data-sort-for="Periode Luler"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="Nama PJP">
+                            Nama PJP <span class="sort-icon" data-sort-for="Nama PJP"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sandi PJP
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="Jumlah Perusahaan Kerjasama P2P">
+                            Jumlah Perusahaan <span class="sort-icon" data-sort-for="Jumlah Perusahaan Kerjasama P2P"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Keterangan Kerjasama
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="Created at">
+                            Tanggal Dibuat <span class="sort-icon" data-sort-for="Created at"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Detail Perusahaan
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="p2pTableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <nav class="flex items-center justify-between pt-4" aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500" id="paginationInfo"></span>
+            <ul class="inline-flex -space-x-px text-sm" id="paginationControls">
+                <!-- Pagination buttons will be populated by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data passed from Flask
+    const allP2PReports = JSON.parse('{{ all_p2p_reports | tojson | trim | safe }}');
+    const trendChartData = JSON.parse('{{ trend_chart_data | tojson | trim | safe }}');
+    const initialTopBottomData = JSON.parse('{{ initial_top_bottom_data | tojson | trim | safe }}');
+
+    console.log("allP2PReports initialized:", allP2PReports);
+    console.log("trendChartData initialized:", trendChartData);
+    console.log("initialTopBottomData initialized:", initialTopBottomData);
+
+
+    let currentFilteredReports = [...allP2PReports]; // Initialize with all data
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+    let rowsPerPage = parseInt(document.getElementById('rowsPerPage').value); // Default rows per page
+    let currentPage = 1; // Current page number
+
+    // Chart.js instances
+    let monthlyP2PCooperationChartInstance;
+    let yearlyP2PCooperationChartInstance;
+
+    // Function to format currency (Not directly used for P2P cooperation count, but kept for consistency if needed)
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            // If input is a two-digit number string, convert it to month name
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                // If it's already a month name, return as is
+                return monthInput;
+            }
+        }
+        return monthInput; // Return as is if not a recognized format
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            // If it's already a two-digit number string, return it as int
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+        }
+        return 0; // Default to 0 if not found
+    }
+
+    // Function to populate the table
+    function populateTable(reports) {
+        const tableBody = document.getElementById('p2pTableBody');
+        tableBody.innerHTML = ''; // Clear existing rows
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = rowsPerPage === 'all' ? reports.length : startIndex + rowsPerPage;
+        const paginatedReports = reports.slice(startIndex, endIndex);
+
+        if (paginatedReports.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">Tidak ada data laporan Kerjasama P2P untuk periode ini.</td></tr>`;
+            document.getElementById('paginationInfo').textContent = 'Menampilkan 0 dari 0 data';
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+
+        paginatedReports.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            // Assuming detail URL for P2P follows a similar pattern
+            // You might need to adjust this URL based on your Flask app's actual routes
+            const detailUrl = `/analisis_pjp/${report['Sandi PJP']}/kerjasamap2p_report_detail/${report['Tahun Laporan']}/${report['Periode Luler']}`;
+
+            let companyDetailsHtml = 'N/A';
+            if (report["Perusahaan Kerjasama P2P"] && report["Perusahaan Kerjasama P2P"].length > 0) {
+                companyDetailsHtml = report["Perusahaan Kerjasama P2P"].map(company => company["Nama Perusahaan Kerjasama"]).join(', ');
+            }
+
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Tahun Laporan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Periode Laporan Nama"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Nama PJP"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Sandi PJP"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Jumlah Perusahaan Kerjasama P2P"]}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${report["Keterangan Kerjasama"]}">${report["Keterangan Kerjasama"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["Created at"]}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${companyDetailsHtml}">${companyDetailsHtml}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        updateSortIcons();
+        renderPaginationControls(reports.length);
+    }
+
+    // Function to filter reports based on selected period range
+    function filterReports() {
+        const startMonth = document.getElementById('startMonthFilter').value;
+        const startYear = document.getElementById('startYearFilter').value;
+        const endMonth = document.getElementById('endMonthFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        console.log("Filter parameters:", { startMonth, startYear, endMonth, endYear });
+
+        if (!startYear || !endYear) { // Handle cases where years might not be populated yet
+            currentFilteredReports = [...allP2PReports];
+            currentPage = 1; // Reset to first page
+            populateTable(currentFilteredReports);
+            updateVisualizations(currentFilteredReports);
+            updateKPIs(currentFilteredReports); // Update KPIs
+            console.log("No years selected, showing all reports.");
+            return;
+        }
+
+        // Create comparable integer values for period ranges (YYYYMM)
+        // Ensure month values are always two digits for consistent parsing
+        const startPeriodValue = parseInt(startYear + String(getMonthNumber(startMonth)).padStart(2, '0'));
+        const endPeriodValue = parseInt(endYear + String(getMonthNumber(endMonth)).padStart(2, '0'));
+
+        console.log("Start Period Value (YYYYMM):", startPeriodValue);
+        console.log("End Period Value (YYYYMM):", endPeriodValue);
+
+        currentFilteredReports = allP2PReports.filter(report => {
+            // Convert report's Periode Luler (e.g., "Agustus") to its numeric equivalent (e.g., "08")
+            const reportMonthNumber = getMonthNumber(report["Periode Luler"]);
+            const reportPeriodValue = parseInt(String(report["Tahun Laporan"]) + String(reportMonthNumber).padStart(2, '0'));
+
+            return reportPeriodValue >= startPeriodValue && reportPeriodValue <= endPeriodValue;
+        });
+
+        console.log("Filtered Reports count:", currentFilteredReports.length);
+        console.log("Filtered Reports data (first 5):", currentFilteredReports.slice(0, 5));
+
+        currentPage = 1; // Reset to first page after filtering
+        // Re-apply current sorting after filtering
+        if (currentSortColumn) {
+            sortReports(currentSortColumn, currentSortDirection);
+        } else {
+            populateTable(currentFilteredReports);
+        }
+        updateVisualizations(currentFilteredReports);
+        updateKPIs(currentFilteredReports); // Update KPIs
+    }
+
+    // Function to populate year dropdowns
+    function populateYearFilters() {
+        const startYearFilter = document.getElementById('startYearFilter');
+        const endYearFilter = document.getElementById('endYearFilter');
+
+        // Clear existing options
+        startYearFilter.innerHTML = '';
+        endYearFilter.innerHTML = '';
+
+        const years = new Set();
+        allP2PReports.forEach(report => {
+            years.add(report["Tahun Laporan"]);
+        });
+
+        const sortedYears = Array.from(years).sort((a, b) => a - b);
+
+        console.log("Available years for filter:", sortedYears);
+
+        if (sortedYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            sortedYears.push(currentYear);
+            // Add a previous year if sensible, and if only current year is present
+            if (currentYear > 2000 && allP2PReports.length === 0) {
+                sortedYears.unshift(currentYear - 1); 
+            }
+        }
+
+        sortedYears.forEach(year => {
+            const optionStart = document.createElement('option');
+            optionStart.value = year;
+            optionStart.textContent = year;
+            startYearFilter.appendChild(optionStart);
+
+            const optionEnd = document.createElement('option');
+            optionEnd.value = year;
+            optionEnd.textContent = year;
+            endYearFilter.appendChild(optionEnd);
+        });
+
+        // Set default selected years to cover all data or current year range
+        if (sortedYears.length > 0) {
+            startYearFilter.value = sortedYears[0];
+            endYearFilter.value = sortedYears[sortedYears.length - 1];
+        } else {
+            const currentYear = new Date().getFullYear();
+            startYearFilter.value = currentYear;
+            endYearFilter.value = currentYear;
+        }
+    }
+
+    // Function to sort reports
+    function sortReports(column, direction) {
+        console.log(`Sorting by ${column} in ${direction} order.`);
+
+        currentFilteredReports.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            // Special handling for 'Periode Luler' to sort numerically (month number)
+            if (column === "Periode Luler") {
+                valA = getMonthNumber(valA); // Convert month name to number for sorting
+                valB = getMonthNumber(valB); // Convert month name to number for sorting
+            }
+            // Special handling for 'Created at' to sort by date
+            else if (column === "Created at") { // Use else if to avoid re-evaluating
+                valA = new Date(valA);
+                valB = new Date(valB);
+            }
+
+            if (valA < valB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+        populateTable(currentFilteredReports); // Re-populate table after sorting
+    }
+
+    // Function to update sort icons in table headers
+    function updateSortIcons() {
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.innerHTML = ''; // Clear all icons
+        });
+
+        if (currentSortColumn) {
+            const activeIcon = document.querySelector(`.sort-icon[data-sort-for="${currentSortColumn}"]`);
+            if (activeIcon) {
+                activeIcon.innerHTML = currentSortDirection === 'asc' ? '&#9650;' : '&#9660;'; // Up or Down arrow
+            }
+        }
+    }
+
+    // Function to handle header clicks for sorting
+    document.querySelectorAll('th[data-sort-by]').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort-by');
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            sortReports(currentSortColumn, currentSortDirection);
+        });
+    });
+
+    // Function to export data to Excel (XLSX format)
+    async function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor.');
+            return;
+        }
+
+        const startMonth = document.getElementById('startMonthFilter').value;
+        const startYear = document.getElementById('startYearFilter').value;
+        const endMonth = document.getElementById('endMonthFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        // Construct query parameters for the Flask endpoint
+        const params = new URLSearchParams({
+            startMonth: startMonth,
+            startYear: startYear,
+            endMonth: endMonth,
+            endYear: endYear
+        });
+
+        console.log("Exporting to Excel with parameters:", params.toString());
+
+
+        try {
+            const response = await fetch(`/export_kerjasamap2p_xlsx?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            const startMonthName = getMonthName(document.getElementById('startMonthFilter').value);
+            const endMonthName = getMonthName(document.getElementById('endMonthFilter').value);
+            const fileName = `Laporan_Kerjasama_P2P_Global_${startMonthName}_${startYear}_to_${endMonthName}_${endYear}.xlsx`;
+            
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            console.log("Excel export successful!");
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            alert('Terjadi kesalahan saat mengekspor data ke Excel.');
+        }
+    }
+
+    // --- Chart and Top/Bottom Analysis Functions ---
+
+    function updateVisualizations(reports) {
+        console.log("Updating visualizations with reports:", reports.length);
+
+        // Aggregate data for charts based on the filtered reports
+        const monthlyAggregated = {};
+        const yearlyAggregated = {};
+
+        reports.forEach(report => {
+            const year = report["Tahun Laporan"];
+            const month = report["Periode Luler"]; // e.g., "01", "02"
+            const jumlahPerusahaan = report["Jumlah Perusahaan Kerjasama P2P"] || 0;
+
+            // Monthly aggregation
+            const monthKey = `${year}-${month}`;
+            if (!monthlyAggregated[monthKey]) {
+                monthlyAggregated[monthKey] = { total_cooperation: 0 };
+            }
+            monthlyAggregated[monthKey].total_cooperation += jumlahPerusahaan;
+
+            // Yearly aggregation
+            const yearKey = String(year);
+            if (!yearlyAggregated[yearKey]) {
+                yearlyAggregated[yearKey] = { total_cooperation: 0 };
+            }
+            yearlyAggregated[yearKey].total_cooperation += jumlahPerusahaan;
+        });
+
+        console.log("Monthly aggregated data:", monthlyAggregated);
+        console.log("Yearly aggregated data:", yearlyAggregated);
+
+
+        // Prepare data for Monthly Chart
+        const sortedMonthlyKeys = Object.keys(monthlyAggregated).sort((a, b) => {
+            const [yearA, monthA] = a.split('-');
+            const [yearB, monthB] = b.split('-');
+            if (yearA !== yearB) return yearA - yearB;
+            return parseInt(monthA) - parseInt(monthB);
+        });
+        const monthlyLabels = sortedMonthlyKeys.map(k => `${getMonthName(k.split('-')[1])} ${k.split('-')[0]}`);
+        const monthlyCooperationCounts = sortedMonthlyKeys.map(k => monthlyAggregated[k].total_cooperation);
+
+        // Prepare data for Yearly Chart
+        const sortedYearlyKeys = Object.keys(yearlyAggregated).sort((a, b) => parseInt(a) - parseInt(b));
+        const yearlyLabels = sortedYearlyKeys;
+        const yearlyCooperationCounts = sortedYearlyKeys.map(k => yearlyAggregated[k].total_cooperation);
+
+        // Render Monthly P2P Cooperation Chart
+        if (monthlyP2PCooperationChartInstance) {
+            monthlyP2PCooperationChartInstance.destroy();
+            monthlyP2PCooperationChartInstance = null;
+        }
+        const monthlyCtx = document.getElementById('monthlyP2PCooperationChart').getContext('2d');
+        monthlyCtx.canvas.height = 300;
+        monthlyCtx.canvas.width = monthlyCtx.canvas.parentNode.offsetWidth;
+        monthlyP2PCooperationChartInstance = new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'Jumlah Perusahaan Kerjasama P2P Bulanan',
+                    data: monthlyCooperationCounts,
+                    borderColor: 'rgba(59, 130, 246, 1)', // Blue
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    fill: false, tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Jumlah Perusahaan' } },
+                    x: { title: { display: true, text: 'Periode' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+
+        // Render Yearly P2P Cooperation Chart
+        if (yearlyP2PCooperationChartInstance) {
+            yearlyP2PCooperationChartInstance.destroy();
+            yearlyP2PCooperationChartInstance = null;
+        }
+        const yearlyCtx = document.getElementById('yearlyP2PCooperationChart').getContext('2d');
+        yearlyCtx.canvas.height = 300;
+        yearlyCtx.canvas.width = yearlyCtx.canvas.parentNode.offsetWidth;
+        yearlyP2PCooperationChartInstance = new Chart(yearlyCtx, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [{
+                    label: 'Jumlah Perusahaan Kerjasama P2P Tahunan',
+                    data: yearlyCooperationCounts,
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Jumlah Perusahaan' } },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+
+        // Update Top/Bottom Reports and PJPs
+        const topBottomData = getTopBottomAnalysis(reports);
+        console.log("Top/Bottom Analysis Data:", topBottomData);
+
+        // Laporan Kerjasama P2P (individual reports)
+        displayTopBottomLists('topReportsCountList', topBottomData.top_5_reports_by_count, 'Jumlah Perusahaan Kerjasama P2P', 'report', 'jumlah');
+        displayTopBottomLists('bottomReportsCountList', topBottomData.bottom_5_reports_by_count, 'Jumlah Perusahaan Kerjasama P2P', 'report', 'jumlah');
+        
+        // PJP (aggregated)
+        displayTopBottomLists('topPJPsCountList', topBottomData.top_5_pjps_by_count, 'total_cooperation', 'aggregated', 'jumlah');
+        displayTopBottomLists('bottomPJPsCountList', topBottomData.bottom_5_pjps_by_count, 'total_cooperation', 'aggregated', 'jumlah');
+    }
+
+    // Helper function for Top/Bottom Analysis
+    function getTopBottomAnalysis(reports) {
+        const pjpAggregated = {};        // { "PJP_Name": { "total_cooperation": N } }
+
+        reports.forEach(report => {
+            const pjpName = report["Nama PJP"] || "Tidak Diketahui";
+            const jumlahPerusahaan = report["Jumlah Perusahaan Kerjasama P2P"] || 0;
+
+            // Aggregate by PJP
+            if (!pjpAggregated[pjpName]) {
+                pjpAggregated[pjpName] = {"total_cooperation": 0}; // Corrected: Use pjpName directly as key
+            }
+            pjpAggregated[pjpName].total_cooperation += jumlahPerusahaan;
+        });
+
+        // Convert to list of (name, data_dict) tuples for PJPs
+        const pjpsList = Object.entries(pjpAggregated);
+
+        // Sort and slice for top/bottom 5 for PJPs by cooperation count
+        const top5PJPsByCount = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.total_cooperation - dataA.total_cooperation).slice(0, 5);
+        const bottom5PJPsByCount = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.total_cooperation - dataB.total_cooperation).slice(0, 5);
+
+        // --- Top/Bottom Individual Reports ---
+        // Make copies to sort without affecting the original filteredReports
+        const reportsByCount = [...reports];
+
+        // Sort by Jumlah Perusahaan Kerjasama P2P
+        const top5ReportsByCount = reportsByCount.sort((a, b) => b["Jumlah Perusahaan Kerjasama P2P"] - a["Jumlah Perusahaan Kerjasama P2P"]).slice(0, 5);
+        const bottom5ReportsByCount = reportsByCount.sort((a, b) => a["Jumlah Perusahaan Kerjasama P2P"] - b["Jumlah Perusahaan Kerjasama P2P"]).slice(0, 5);
+
+        return {
+            top_5_reports_by_count: top5ReportsByCount,
+            bottom_5_reports_by_count: bottom5ReportsByCount,
+            top_5_pjps_by_count: top5PJPsByCount,
+            bottom_5_pjps_by_count: bottom5PJPsByCount,
+        };
+    }
+
+    // Helper function to display top/bottom lists
+    function displayTopBottomLists(elementId, data, valueKey, dataType, valueType) { // valueType: 'jumlah' or 'nominal'
+        const listElement = document.getElementById(elementId);
+        listElement.innerHTML = '';
+        if (data.length === 0) {
+            listElement.innerHTML = '<li>Tidak ada data.</li>';
+            return;
+        }
+        data.forEach(item => {
+            const listItem = document.createElement('li');
+            let name, displayValue;
+
+            if (dataType === 'report') {
+                // Item is a full report object
+                name = `${item["Nama PJP"]} (${item["Periode Laporan Nama"]} ${item["Tahun Laporan"]})`;
+                displayValue = item[valueKey];
+            } else if (dataType === 'aggregated') {
+                // Item is an array [name, data_object] from Object.entries
+                name = item[0];
+                displayValue = item[1][valueKey];
+            }
+
+            if (valueType === 'nominal') {
+                displayValue = formatCurrency(displayValue);
+            } else {
+                displayValue = `${displayValue} perusahaan`; // For number of companies
+            }
+            
+            listItem.textContent = `${name}: ${displayValue}`;
+            listElement.appendChild(listItem);
+        });
+    }
+
+    // Function to update KPI cards
+    function updateKPIs(reports) {
+        const totalCooperation = reports.reduce((sum, report) => sum + (report["Jumlah Perusahaan Kerjasama P2P"] || 0), 0);
+        const totalReports = reports.length;
+        const avgCooperationPerReport = totalReports > 0 ? totalCooperation / totalReports : 0;
+
+        document.getElementById('totalCooperationKpi').textContent = totalCooperation.toLocaleString('id-ID');
+        document.getElementById('avgCooperationKpi').textContent = avgCooperationPerReport.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('totalReportsKpi').textContent = totalReports.toLocaleString('id-ID');
+    }
+
+    // --- Pagination Functions ---
+    function renderPaginationControls(totalReports) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = ''; // Clear existing controls
+
+        const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(totalReports / rowsPerPage);
+        const paginationInfo = document.getElementById('paginationInfo');
+
+        if (totalReports === 0) {
+            paginationInfo.textContent = 'Menampilkan 0 dari 0 data';
+            return;
+        }
+
+        const startEntry = (currentPage - 1) * rowsPerPage + 1;
+        const endEntry = rowsPerPage === 'all' ? totalReports : Math.min(currentPage * rowsPerPage, totalReports);
+        paginationInfo.textContent = `Menampilkan ${startEntry}-${endEntry} dari ${totalReports} data`;
+
+        if (totalPages <= 1) {
+            return; // No need for pagination if only one page
+        }
+
+        // Previous button
+        const prevButton = document.createElement('li');
+        prevButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}">Previous</a>`;
+        prevButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(prevButton);
+
+        // Page numbers
+        const maxPageButtons = 5; // Max number of page buttons to show
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('li');
+            pageButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ${i === currentPage ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700' : ''}">${i}</a>`;
+            pageButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentPage = i;
+                populateTable(currentFilteredReports);
+            });
+            paginationControls.appendChild(pageButton);
+        }
+
+        // Next button
+        const nextButton = document.createElement('li');
+        nextButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}">Next</a>`;
+        nextButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(nextButton);
+    }
+
+
+    // Event listener for rows per page change
+    document.getElementById('rowsPerPage').addEventListener('change', function() {
+        rowsPerPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1; // Reset to first page when rows per page changes
+        populateTable(currentFilteredReports);
+    });
+
+    // Add event listener for export button
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+    // Add event listener for the new Filter button
+    document.getElementById('applyFilterBtn').addEventListener('click', filterReports);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        populateYearFilters(); // Populate years first
+        filterReports();      // Apply initial filter (which also populates the table and visualizations)
+    });
+</script>
+
+{% endblock %}

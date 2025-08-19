@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan Keuangan Triwulanan - {{ pjp_name }} ({{ report_data.get('nama_periode_laporan', 'N/A') }}/{{ report_data.get('tahun_laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard Keuangan Triwulanan -->
+    <div class="mb-6">
+        <a href="{{ url_for('keuangantriwulanan_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard Keuangan Triwulanan
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Keuangan Triwulanan</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Periode: {{ report_data.get('nama_periode_laporan', 'N/A') }} {{ report_data.get('tahun_laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report_data.get('nomor_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data.get('tanggal_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Modal Dasar:</span> Rp {{ "{:,.0f}".format(report_data.get('modal_dasar', 0)) }}</p>
+                        <p><span class="font-semibold">Modal Disetor:</span> Rp {{ "{:,.0f}".format(report_data.get('modal_disetor', 0)) }}</p>
+                        <p><span class="font-semibold">Total Aset:</span> Rp {{ "{:,.0f}".format(report_data.get('total_aset', 0)) }}</p>
+                        <p><span class="font-semibold">Aset Lancar:</span> Rp {{ "{:,.0f}".format(report_data.get('aset_lancar', 0)) }}</p>
+                        <p><span class="font-semibold">Kas & Setara Kas:</span> Rp {{ "{:,.0f}".format(report_data.get('kas_dan_setara_kas', 0)) }}</p>
+                        <p><span class="font-semibold">Aset Tetap:</span> Rp {{ "{:,.0f}".format(report_data.get('aset_tetap', 0)) }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Total Hutang:</span> Rp {{ "{:,.0f}".format(report_data.get('total_hutang', 0)) }}</p>
+                        <p><span class="font-semibold">Hutang Jangka Pendek:</span> Rp {{ "{:,.0f}".format(report_data.get('hutang_jangka_pendek', 0)) }}</p>
+                        <p><span class="font-semibold">Hutang Jangka Panjang:</span> Rp {{ "{:,.0f}".format(report_data.get('hutang_jangka_panjang', 0)) }}</p>
+                        <p><span class="font-semibold">Total Ekuitas:</span> Rp {{ "{:,.0f}".format(report_data.get('total_ekuitas', 0)) }}</p>
+                        <p><span class="font-semibold">Total Pendapatan:</span> Rp {{ "{:,.0f}".format(report_data.get('total_pendapatan', 0)) }}</p>
+                        <p><span class="font-semibold">Pendapatan Fee:</span> Rp {{ "{:,.0f}".format(report_data.get('pendapatan_fee', 0)) }}</p>
+                        <p><span class="font-semibold">Total Beban:</span> Rp {{ "{:,.0f}".format(report_data.get('total_beban', 0)) }}</p>
+                        <p><span class="font-semibold">Beban Operasional:</span> Rp {{ "{:,.0f}".format(report_data.get('beban_operasional', 0)) }}</p>
+                        <p><span class="font-semibold">Laba:</span> Rp {{ "{:,.0f}".format(report_data.get('laba', 0)) }}</p>
+                        <p><span class="font-semibold">Rugi:</span> Rp {{ "{:,.0f}".format(report_data.get('rugi', 0)) }}</p>
+                        <p><span class="font-semibold">Created at:</span> {{ report_data.get('created_at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rasio Keuangan Penting untuk Laporan Ini -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Rasio Keuangan Penting</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Rasio Lancar:</span> <span id="detailRasioLancar">N/A</span></p>
+                        <p><span class="font-semibold">Rasio Cepat:</span> <span id="detailRasioCepat">N/A</span></p>
+                        <p><span class="font-semibold">Rasio Kas:</span> <span id="detailRasioKas">N/A</span></p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Rasio Hutang terhadap Ekuitas:</span> <span id="detailRasioHutangEkuitas">N/A</span></p>
+                        <p><span class="font-semibold">Marjin Laba:</span> <span id="detailMarjinLaba">N/A</span></p>
+                        <p><span class="font-semibold">Return on Equity (ROE):</span> <span id="detailROE">N/A</span></p>
+                        <p><span class="font-semibold">Return on Assets (ROA):</span> <span id="detailROA">N/A</span></p> {# Added ROA #}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Perbandingan Triwulan Sebelumnya -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan dengan Triwulan Sebelumnya</h4>
+                <div class="w-full h-64">
+                    <canvas id="previousQuarterComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Chart: Modal Dasar vs Modal Disetor (Current Period) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Modal Dasar vs Modal Disetor (Periode Ini)</h4>
+                <div class="w-full h-64">
+                    <canvas id="modalComparisonChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- New Chart: Pendapatan vs Beban Operasional (Current Period) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Pendapatan vs Beban Operasional (Periode Ini)</h4>
+                <div class="w-full h-64">
+                    <canvas id="incomeExpenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) and Yearly Comparison -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Perbandingan Tahunan (Triwulan yang Sama) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
+                    Perbandingan Tahunan (Triwulan {{ report_data.get('nama_periode_laporan', 'N/A') }} Saja)
+                </h4>
+                <div class="w-full h-64">
+                    <canvas id="yearlySameQuarterComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Chart: Komposisi Aset (Current Period) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Komposisi Aset (Periode Ini)</h4>
+                <div class="w-full h-64">
+                    <canvas id="assetCompositionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Chart: Komposisi Hutang (Current Period) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Komposisi Hutang (Periode Ini)</h4>
+                <div class="w-full h-64">
+                    <canvas id="liabilityCompositionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report_data.get('file_url') and report_data.get('file_url') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden">
+                        <iframe src="{{ report_data.get('file_url') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report_data.get('file_url') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="report-data">
+    {{ report_data | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-previous-quarter-data">
+    {{ comparison_data_previous_quarter | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-previous-year-same-quarter-data">
+    {{ comparison_data_previous_year_same_quarter | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        let report;
+        let comparisonDataPreviousQuarter;
+        let comparisonDataPreviousYearSameQuarter;
+
+        try {
+            report = JSON.parse(document.getElementById('report-data').textContent.trim());
+            console.log("Parsed report data:", report);
+        } catch (e) {
+            console.error("Error parsing report JSON:", e);
+            report = {};
+        }
+
+        try {
+            const rawPrevQuarterData = document.getElementById('comparison-previous-quarter-data').textContent.trim();
+            comparisonDataPreviousQuarter = rawPrevQuarterData ? JSON.parse(rawPrevQuarterData) : null;
+            console.log("Parsed comparisonDataPreviousQuarter:", comparisonDataPreviousQuarter);
+        } catch (e) {
+            console.error("Error parsing comparisonDataPreviousQuarter JSON:", e);
+            comparisonDataPreviousQuarter = null;
+        }
+
+        try {
+            const rawPrevYearSameQuarterData = document.getElementById('comparison-previous-year-same-quarter-data').textContent.trim();
+            comparisonDataPreviousYearSameQuarter = rawPrevYearSameQuarterData ? JSON.parse(rawPrevYearSameQuarterData) : null;
+            console.log("Parsed comparisonDataPreviousYearSameQuarter:", comparisonDataPreviousYearSameQuarter);
+        } catch (e) {
+            console.error("Error parsing comparisonDataPreviousYearSameQuarter JSON:", e);
+            comparisonDataPreviousYearSameQuarter = null;
+        }
+
+        // Helper to format currency
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper to get quarter name for display
+        function getQuarterName(quarter) {
+            return quarter; // Q1, Q2, Q3, Q4 already good
+        }
+
+        // --- Hitung dan Tampilkan Rasio Keuangan ---
+        const asetLancar = report.aset_lancar || 0;
+        const kasDanSetaraKas = report.kas_dan_setara_kas || 0;
+        const totalPendapatan = report.total_pendapatan || 0;
+        const labaBersih = (report.laba || 0) - (report.rugi || 0);
+        const hutangJangkaPendek = report.hutang_jangka_pendek || 0;
+        const totalHutang = report.total_hutang || 0;
+        const totalEkuitas = report.total_ekuitas || 0;
+        const totalAset = report.total_aset || 0; // Added for ROA
+
+        document.getElementById('detailRasioLancar').textContent = (hutangJangkaPendek > 0 ? (asetLancar / hutangJangkaPendek).toFixed(2) : 0) + 'x';
+        document.getElementById('detailRasioCepat').textContent = (hutangJangkaPendek > 0 ? ((asetLancar - (report.persediaan || 0)) / hutangJangkaPendek).toFixed(2) : 0) + 'x'; // Assuming no 'persediaan' field, so it's 0
+        document.getElementById('detailRasioKas').textContent = (hutangJangkaPendek > 0 ? (kasDanSetaraKas / hutangJangkaPendek).toFixed(2) : 0) + 'x';
+        document.getElementById('detailRasioHutangEkuitas').textContent = (totalEkuitas > 0 ? (totalHutang / totalEkuitas).toFixed(2) : 0) + 'x';
+        document.getElementById('detailMarjinLaba').textContent = (totalPendapatan > 0 ? (labaBersih / totalPendapatan * 100).toFixed(2) : 0) + '%';
+        document.getElementById('detailROE').textContent = (totalEkuitas > 0 ? (labaBersih / totalEkuitas * 100).toFixed(2) : 0) + '%';
+        document.getElementById('detailROA').textContent = (totalAset > 0 ? (labaBersih / totalAset * 100).toFixed(2) : 0) + '%'; // Added ROA calculation
+
+
+        // --- Grafik Batang: Perbandingan dengan Triwulan Sebelumnya (Aset, Hutang, Ekuitas, Pendapatan, Beban, Laba/Rugi Bersih) ---
+        const labelsPrevQuarter = ["Total Aset", "Total Hutang", "Total Ekuitas", "Total Pendapatan", "Total Beban", "Laba/Rugi Bersih"];
+        const dataCurrentQuarter = [
+            report.total_aset || 0,
+            report.total_hutang || 0,
+            report.total_ekuitas || 0,
+            report.total_pendapatan || 0,
+            report.total_beban || 0,
+            (report.laba || 0) - (report.rugi || 0)
+        ];
+
+        const dataPreviousQuarter = [];
+        if (comparisonDataPreviousQuarter) {
+            dataPreviousQuarter.push(
+                comparisonDataPreviousQuarter.total_aset || 0,
+                comparisonDataPreviousQuarter.total_hutang || 0,
+                comparisonDataPreviousQuarter.total_ekuitas || 0,
+                comparisonDataPreviousQuarter.total_pendapatan || 0,
+                comparisonDataPreviousQuarter.total_beban || 0,
+                (comparisonDataPreviousQuarter.laba || 0) - (comparisonDataPreviousQuarter.rugi || 0)
+            );
+        } else {
+            dataPreviousQuarter.push(0, 0, 0, 0, 0, 0); // No previous quarter data
+        }
+
+        const ctxPrevQuarter = document.getElementById('previousQuarterComparisonChart').getContext('2d');
+        new Chart(ctxPrevQuarter, {
+            type: 'bar',
+            data: {
+                labels: labelsPrevQuarter,
+                datasets: [
+                    {
+                        label: `Triwulan Ini (${report.nama_periode_laporan} ${report.tahun_laporan})`,
+                        data: dataCurrentQuarter,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: `Triwulan Sebelumnya (${comparisonDataPreviousQuarter ? comparisonDataPreviousQuarter.periode_laporan_nama + ' ' + comparisonDataPreviousQuarter.tahun_laporan : 'N/A'})`,
+                        data: dataPreviousQuarter,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Posisi Keuangan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // --- New Chart: Modal Dasar vs Modal Disetor (Current Period) ---
+        const ctxModal = document.getElementById('modalComparisonChart').getContext('2d');
+        new Chart(ctxModal, {
+            type: 'bar',
+            data: {
+                labels: ['Modal Dasar', 'Modal Disetor'],
+                datasets: [{
+                    label: `Jumlah (Rp) (${report.nama_periode_laporan} ${report.tahun_laporan})`,
+                    data: [report.modal_dasar || 0, report.modal_disetor || 0],
+                    backgroundColor: ['rgba(153, 102, 255, 0.7)', 'rgba(255, 205, 86, 0.7)'],
+                    borderColor: ['rgba(153, 102, 255, 1)', 'rgba(255, 205, 86, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Jenis Modal' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // --- New Chart: Pendapatan vs Beban Operasional (Current Period) ---
+        const ctxIncomeExpense = document.getElementById('incomeExpenseChart').getContext('2d');
+        new Chart(ctxIncomeExpense, {
+            type: 'bar',
+            data: {
+                labels: ['Total Pendapatan', 'Pendapatan Fee', 'Total Beban', 'Beban Operasional'],
+                datasets: [{
+                    label: `Jumlah (Rp) (${report.nama_periode_laporan} ${report.tahun_laporan})`,
+                    data: [
+                        report.total_pendapatan || 0,
+                        report.pendapatan_fee || 0,
+                        report.total_beban || 0,
+                        report.beban_operasional || 0
+                    ],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.7)', // Green for Revenue
+                        'rgba(75, 192, 192, 0.7)', // Teal for Fee Revenue
+                        'rgba(239, 68, 68, 0.7)', // Red for Expenses
+                        'rgba(255, 99, 132, 0.7)' // Light Red for Operating Expenses
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Item Laporan Laba Rugi' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+
+        // --- Grafik Batang: Perbandingan Tahunan (Triwulan yang Sama) ---
+        const labelsYearly = ["Total Aset", "Total Hutang", "Total Ekuitas", "Total Pendapatan", "Total Beban", "Laba/Rugi Bersih"];
+        const dataYearlyCurrent = [
+            report.total_aset || 0,
+            report.total_hutang || 0,
+            report.total_ekuitas || 0,
+            report.total_pendapatan || 0,
+            report.total_beban || 0,
+            (report.laba || 0) - (report.rugi || 0)
+        ];
+
+        const dataYearlyPrevious = [];
+        if (comparisonDataPreviousYearSameQuarter) {
+            dataYearlyPrevious.push(
+                comparisonDataPreviousYearSameQuarter.total_aset || 0,
+                comparisonDataPreviousYearSameQuarter.total_hutang || 0,
+                comparisonDataPreviousYearSameQuarter.total_ekuitas || 0,
+                comparisonDataPreviousYearSameQuarter.total_pendapatan || 0,
+                comparisonDataPreviousYearSameQuarter.total_beban || 0,
+                (comparisonDataPreviousYearSameQuarter.laba || 0) - (comparisonDataPreviousYearSameQuarter.rugi || 0)
+            );
+        } else {
+            dataYearlyPrevious.push(0, 0, 0, 0, 0, 0); // No previous year data
+        }
+
+        const ctxYearly = document.getElementById('yearlySameQuarterComparisonChart').getContext('2d');
+        new Chart(ctxYearly, {
+            type: 'bar',
+            data: {
+                labels: labelsYearly,
+                datasets: [
+                    {
+                        label: `Tahun Ini (${report.tahun_laporan})`,
+                        data: dataYearlyCurrent,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: `Tahun Lalu (${comparisonDataPreviousYearSameQuarter ? comparisonDataPreviousYearSameQuarter.tahun_laporan : 'N/A'})`,
+                        data: dataYearlyPrevious,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Item Keuangan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // --- New Chart: Komposisi Aset (Current Period) ---
+        const ctxAssetComposition = document.getElementById('assetCompositionChart').getContext('2d');
+        new Chart(ctxAssetComposition, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aset Lancar', 'Aset Tetap'],
+                datasets: [{
+                    data: [report.aset_lancar || 0, report.aset_tetap || 0],
+                    backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(75, 192, 192, 0.7)'],
+                    borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } }
+                }
+            }
+        });
+
+        // --- New Chart: Komposisi Hutang (Current Period) ---
+        const ctxLiabilityComposition = document.getElementById('liabilityCompositionChart').getContext('2d');
+        new Chart(ctxLiabilityComposition, {
+            type: 'doughnut',
+            data: {
+                labels: ['Hutang Jangka Pendek', 'Hutang Jangka Panjang'],
+                datasets: [{
+                    data: [report.hutang_jangka_pendek || 0, report.hutang_jangka_panjang || 0],
+                    backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(255, 159, 64, 0.7)'],
+                    borderColor: ['rgba(255, 99, 132, 1)', 'rgba(255, 159, 64, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

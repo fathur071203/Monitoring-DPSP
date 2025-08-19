@@ -1,0 +1,1132 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan Fraud - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP dipindahkan ke sini -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Fraud</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Awal:</label>
+            <select id="startMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}">{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Akhir:</label>
+            <select id="endMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}" {% if loop.last %}selected{% endif %}>{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col w-48">
+            <label for="lossRange" class="text-sm font-medium text-gray-700 mb-1">Potensi Kerugian:</label>
+            <input type="range" id="lossRange" min="{{ min_potential_loss }}" max="{{ max_potential_loss }}" value="{{ max_potential_loss }}"
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" oninput="updateLossRangeLabel(this.value)">
+            <span id="lossRangeLabel" class="text-xs text-gray-500 mt-1 text-center">Max: Rp {{ "{:,.0f}".format(max_potential_loss) }}</span>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Fraud</p>
+            <p id="kpiTotalFraud" class="text-3xl font-bold text-gray-800 mt-1">{{ kpis.total_fraud }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Potensi Kerugian</p>
+            <p id="kpiTotalPotensiKerugian" class="text-3xl font-bold text-gray-800 mt-1">Rp {{ "{:,.0f}".format(kpis.total_potensi_kerugian) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Bulan Terbanyak Fraud</p>
+            <p id="kpiBulanTerbanyakFraud" class="text-xl font-bold text-gray-800 mt-1">{{ kpis.bulan_terbanyak_fraud }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Rata-rata Kerugian/Fraud</p>
+            <p id="kpiRataRataKerugian" class="text-3xl font-bold text-gray-800 mt-1">Rp {{ "{:,.0f}".format(kpis.rata_rata_kerugian_per_fraud) }}</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Row 2 – Time Series) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Fraud per Bulan (per Tahun)</h3>
+            <div class="w-full h-80">
+                <canvas id="fraudTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Potensi Kerugian per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="lossPerMonthChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Tren Fraud dan Jumlahnya per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Fraud dan Jumlahnya per Tahun</h3>
+        <div class="w-full h-80">
+            <canvas id="yearlyFraudTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- D. TOP INSIGHT SECTION (Row 3 – Fraud & Kerugian Tertinggi) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Top 5 Bulan dengan Fraud Tertinggi</h3>
+            <div class="w-full h-80">
+                <canvas id="topFraudMonthsChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Top 5 Bulan dengan Kerugian Tertinggi</h3>
+            <div class="w-full h-80">
+                <canvas id="topLossMonthsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- E. HEATMAP MATRIX: Fraud Bulanan per Tahun (Row 4) -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Jumlah Fraud Bulanan per Tahun</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Upload Laporan Fraud Bulanan</h3>
+        <div class="overflow-x-auto">
+            <table id="uploadStatusTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- F. AUTO GENERATED INSIGHT (Row 5 – Dynamic Text Card) -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 {% if show_insight_checkbox is not defined or not show_insight_checkbox %}hidden{% endif %}">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan Fraud -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan Fraud</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th> {# New column header #}
+                        <th class="py-3 px-6 text-left">Nomor Surat</th> {# New column header #}
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th> {# New column header #}
+                        <th class="py-3 px-6 text-left">Periode</th>
+                        <th class="py-3 px-6 text-left">Jumlah Fraud</th>
+                        <th class="py-3 px-6 text-left">Potensi Kerugian</th>
+                        <th class="py-3 px-6 text-left">Keterangan</th>
+                        <th class="py-3 px-6 text-left">Tindak Lanjut</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Menghapus bagian tombol "Kembali ke Detail PJP" yang lama #}
+    {#
+    <div class="text-center mt-8">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Kembali ke Detail PJP
+        </a>
+    </div>
+    #}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script> {# SheetJS library #}
+<script>
+    // Global variables for charts to allow updating them
+    let fraudTrendChartInstance;
+    let lossPerMonthChartInstance;
+    let yearlyFraudTrendChartInstance; // New chart instance
+    let topFraudMonthsChartInstance;
+    let topLossMonthsChartInstance;
+
+    // Data from Flask backend (all raw data for client-side filtering)
+    const allFraudReports = JSON.parse('{{ initial_dashboard_data | safe }}');
+    const monthlyUploadStatusData = JSON.parse('{{ monthly_upload_status | safe }}'); // New data for upload status map
+
+    // FIX: Ensure minLossInitial and maxLossInitial are always valid numbers
+    const minLossInitial = JSON.parse('{{ min_potential_loss | default(0) | safe }}');
+    const maxLossInitial = JSON.parse('{{ max_potential_loss | default(0) | safe }}');
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to format currency
+    function formatRupiah(amount) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari')
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    function getMonthName(monthNumStr) {
+        return monthNames[parseInt(monthNumStr, 10) - 1];
+    }
+    const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    function getMonthShortName(monthNumStr) {
+        return monthShortNames[parseInt(monthNumStr, 10) - 1];
+    }
+
+
+    // Function to update the loss range label
+    function updateLossRangeLabel(value) {
+        document.getElementById('lossRangeLabel').textContent = `Max: ${formatRupiah(parseInt(value))}`;
+    }
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const availableYearsRaw = allFraudReports.map(report => report["Tahun Laporan"]);
+        const uniqueYears = [...new Set(availableYearsRaw)].sort((a, b) => a - b);
+
+        // Clear existing options before populating
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            // Set default selected values to the min and max available years
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            // Fallback if no years are available
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        console.log("renderDashboard called.");
+        console.log("allFraudReports:", allFraudReports); // DEBUG: Log raw data
+        console.log("monthlyUploadStatusData:", monthlyUploadStatusData); // DEBUG: Log upload status data
+
+        // Retrieve current filter values AFTER dropdowns have been populated/set
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startMonth = document.getElementById('startMonth').value;
+        const endMonth = document.getElementById('endMonth').value;
+        const maxLoss = parseInt(document.getElementById('lossRange').value);
+
+        console.log(`Filters: Year ${startYear}-${endYear}, Month ${startMonth}-${endMonth}, Max Loss ${maxLoss}`); // DEBUG: Log filter values
+
+        // Filter the data based on selected criteria
+        let filteredReports = allFraudReports.filter(report => {
+            // Ensure report["Tahun Laporan"] is treated as a number for comparison
+            const reportYear = parseInt(report["Tahun Laporan"]);
+            const reportMonth = parseInt(report["Periode Laporan"]); // Month as number (1-12)
+
+            const reportDate = new Date(reportYear, reportMonth - 1); // Date object for comparison
+            const startDate = new Date(startYear, parseInt(startMonth) - 1);
+            const endDate = new Date(endYear, parseInt(endMonth) - 1);
+
+            const isDateInRange = reportDate >= startDate && reportDate <= endDate;
+            const isLossInRange = report["Besar Potensi Kerugian"] <= maxLoss;
+
+            // console.log(`Report: ${reportYear}-${reportMonth}, Loss: ${report["Besar Potensi Kerugian"]}, Date In Range: ${isDateInRange}, Loss In Range: ${isLossInRange}`); // Detailed report debugging
+            return isDateInRange && isLossInRange;
+        });
+
+        console.log("Filtered Reports:", filteredReports); // DEBUG: Log filtered data
+
+        // Ensure reports are sorted chronologically for charts
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], parseInt(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], parseInt(b["Periode Laporan"]) - 1);
+            return dateA - dateB;
+        });
+
+        // Store filtered data for export
+        currentFilteredReports = filteredReports;
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateYearlyFraudTrendChart(filteredReports); // Call new chart update function
+        updateTopInsights(filteredReports);
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+        updateUploadStatusMap(); // Call new upload status map update function
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalFraud = data.reduce((sum, report) => sum + report["Jumlah Fraud"], 0);
+        const totalPotensiKerugian = data.reduce((sum, report) => sum + report["Besar Potensi Kerugian"], 0);
+        const totalFraudIncidents = data.reduce((sum, report) => sum + report["Jumlah Fraud"], 0);
+        const rataRataKerugianPerFraud = totalFraudIncidents > 0 ? totalPotensiKerugian / totalFraudIncidents : 0;
+
+        document.getElementById('kpiTotalFraud').textContent = totalFraud;
+        document.getElementById('kpiTotalPotensiKerugian').textContent = formatRupiah(totalPotensiKerugian);
+
+        // Calculate Bulan Terbanyak Fraud
+        const fraudCountsPerMonthYear = {};
+        data.forEach(report => {
+            const key = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            fraudCountsPerMonthYear[key] = (fraudCountsPerMonthYear[key] || 0) + report["Jumlah Fraud"];
+        });
+
+        let bulanTerbanyakFraud = "N/A";
+        if (Object.keys(fraudCountsPerMonthYear).length > 0) {
+            const maxMonthYear = Object.keys(fraudCountsPerMonthYear).reduce((a, b) => fraudCountsPerMonthYear[a] > fraudCountsPerMonthYear[b] ? a : b);
+            bulanTerbanyakFraud = `${maxMonthYear} (${fraudCountsPerMonthYear[maxMonthYear]} kasus)`;
+        }
+        document.getElementById('kpiBulanTerbanyakFraud').textContent = bulanTerbanyakFraud;
+        document.getElementById('kpiRataRataKerugian').textContent = formatRupiah(rataRataKerugianPerFraud);
+    }
+
+    // C. VISUALISASI UTAMA (Charts) Update
+    function updateCharts(data) {
+        // Aggregate data for charts: sum fraud and loss per month-year
+        const aggregatedData = {};
+        data.forEach(report => {
+            const label = `${getMonthShortName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!aggregatedData[label]) {
+                aggregatedData[label] = { 'Jumlah Fraud': 0, 'Besar Potensi Kerugian': 0, date: new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1) };
+            }
+            aggregatedData[label]['Jumlah Fraud'] += report["Jumlah Fraud"];
+            aggregatedData[label]['Besar Potensi Kerugian'] += report["Besar Potensi Kerugian"];
+        });
+
+        // Sort aggregated data by date
+        const sortedAggregatedData = Object.keys(aggregatedData)
+            .map(key => ({ label: key, ...aggregatedData[key] }))
+            .sort((a, b) => a.date - b.date);
+
+        const chartLabels = sortedAggregatedData.map(item => item.label);
+        const chartJumlahFraud = sortedAggregatedData.map(item => item['Jumlah Fraud']);
+        const chartPotensiKerugian = sortedAggregatedData.map(item => item['Besar Potensi Kerugian']);
+
+        console.log("Chart Data - Labels:", chartLabels); // DEBUG: Chart data
+        console.log("Chart Data - Jumlah Fraud:", chartJumlahFraud); // DEBUG: Chart data
+        console.log("Chart Data - Potensi Kerugian:", chartPotensiKerugian); // DEBUG: Chart data
+
+
+        // Destroy existing chart instances before creating new ones
+        if (fraudTrendChartInstance) {
+            fraudTrendChartInstance.destroy();
+        }
+        if (lossPerMonthChartInstance) {
+            lossPerMonthChartInstance.destroy();
+        }
+        // Destroy other chart instances as well
+        if (yearlyFraudTrendChartInstance) {
+            yearlyFraudTrendChartInstance.destroy();
+        }
+        if (topFraudMonthsChartInstance) {
+            topFraudMonthsChartInstance.destroy();
+        }
+        if (topLossMonthsChartInstance) {
+            topLossMonthsChartInstance.destroy();
+        }
+
+
+        const ctx1 = document.getElementById('fraudTrendChart').getContext('2d');
+        fraudTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Insiden Fraud',
+                        data: chartJumlahFraud,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Besar Potensi Kerugian (Rp)',
+                        data: chartPotensiKerugian,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.dataset.label.includes('Kerugian')) label += formatRupiah(context.raw);
+                                else label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        type: 'linear', display: true, position: 'left',
+                        title: { display: true, text: 'Jumlah Insiden Fraud' },
+                        ticks: { beginAtZero: true, precision: 0 }
+                    },
+                    y1: {
+                        type: 'linear', display: true, position: 'right',
+                        title: { display: true, text: 'Besar Potensi Kerugian (Rp)' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        const ctx2 = document.getElementById('lossPerMonthChart').getContext('2d');
+        const maxLossValue = Math.max(...chartPotensiKerugian);
+        const backgroundColors = chartPotensiKerugian.map(value =>
+            value === maxLossValue && maxLossValue > 0 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(59, 130, 246, 0.7)'
+        );
+        lossPerMonthChartInstance = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Potensi Kerugian (Rp)',
+                    data: chartPotensiKerugian,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += formatRupiah(context.raw);
+                                // Also show Jumlah Fraud in tooltip
+                                const index = context.dataIndex;
+                                const fraudCount = chartJumlahFraud[index];
+                                return [label, `Jumlah Fraud: ${fraudCount}`];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Besar Potensi Kerugian (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    }
+
+    // New function for Yearly Fraud Trend Chart
+    function updateYearlyFraudTrendChart(data) {
+        // Aggregate data by year
+        const yearlyData = {};
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            if (!yearlyData[year]) {
+                yearlyData[year] = { 'Jumlah Fraud': 0, 'Besar Potensi Kerugian': 0 };
+            }
+            yearlyData[year]['Jumlah Fraud'] += report["Jumlah Fraud"];
+            yearlyData[year]['Besar Potensi Kerugian'] += report["Besar Potensi Kerugian"];
+        });
+
+        // Sort yearly data by year
+        const sortedYearlyData = Object.keys(yearlyData)
+            .map(year => ({ year: year, ...yearlyData[year] }))
+            .sort((a, b) => a - b);
+
+        const chartLabels = sortedYearlyData.map(item => item.year);
+        const chartJumlahFraud = sortedYearlyData.map(item => item['Jumlah Fraud']);
+        const chartPotensiKerugian = sortedYearlyData.map(item => item['Besar Potensi Kerugian']);
+
+        if (yearlyFraudTrendChartInstance) {
+            yearlyFraudTrendChartInstance.destroy(); // Destroy existing instance
+        }
+        const ctx = document.getElementById('yearlyFraudTrendChart').getContext('2d');
+        yearlyFraudTrendChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Insiden Fraud per Tahun',
+                        data: chartJumlahFraud,
+                        borderColor: 'rgb(153, 102, 255)', // Purple
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Potensi Kerugian per Tahun (Rp)',
+                        data: chartPotensiKerugian,
+                        borderColor: 'rgb(255, 205, 86)', // Yellow
+                        backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.dataset.label.includes('Kerugian')) {
+                                    label += formatRupiah(context.raw);
+                                } else {
+                                    label += context.raw;
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tahun Laporan'
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Jumlah Insiden Fraud'
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Potensi Kerugian (Rp)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatRupiah(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // D. TOP INSIGHT SECTION Update
+    function updateTopInsights(data) {
+        // Aggregate fraud counts and loss per month-year
+        const monthlySummary = {};
+        data.forEach(report => {
+            const key = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            if (!monthlySummary[key]) {
+                monthlySummary[key] = { fraud: 0, loss: 0, date: new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1) };
+            }
+            monthlySummary[key].fraud += report["Jumlah Fraud"];
+            monthlySummary[key].loss += report["Besar Potensi Kerugian"];
+        });
+
+        const sortedMonthlySummary = Object.keys(monthlySummary)
+            .map(key => ({ label: key, fraud: monthlySummary[key].fraud, loss: monthlySummary[key].loss, date: monthlySummary[key].date }));
+
+        // Top 5 Bulan dengan Fraud Tertinggi
+        const top5Fraud = [...sortedMonthlySummary].sort((a, b) => b.fraud - a.fraud).slice(0, 5);
+        const top5FraudLabels = top5Fraud.map(item => item.label);
+        const top5FraudData = top5Fraud.map(item => item.fraud);
+
+        if (topFraudMonthsChartInstance) {
+            topFraudMonthsChartInstance.destroy(); // Destroy existing instance
+        }
+        const ctx3 = document.getElementById('topFraudMonthsChart').getContext('2d');
+        topFraudMonthsChartInstance = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: top5FraudLabels,
+                datasets: [{
+                    label: 'Jumlah Fraud',
+                    data: top5FraudData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)', // Purple-500
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Horizontal bar chart
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Jumlah Fraud' }, ticks: { precision: 0 } },
+                    y: { title: { display: true, text: 'Bulan-Tahun' } }
+                }
+            }
+        });
+
+        // Top 5 Bulan dengan Kerugian Tertinggi
+        const top5Loss = [...sortedMonthlySummary].sort((a, b) => b.loss - a.loss).slice(0, 5);
+        const top5LossLabels = top5Loss.map(item => item.label);
+        const top5LossData = top5Loss.map(item => item.loss);
+
+        if (topLossMonthsChartInstance) {
+            topLossMonthsChartInstance.destroy(); // Destroy existing instance
+        }
+        const ctx4 = document.getElementById('topLossMonthsChart').getContext('2d');
+        topLossMonthsChartInstance = new Chart(ctx4, {
+            type: 'bar',
+            data: {
+                labels: top5LossLabels,
+                datasets: [{
+                    label: 'Total Kerugian (Rp)',
+                    data: top5LossData,
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)', // Orange-500
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Horizontal bar chart
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + formatRupiah(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Total Kerugian (Rp)' }, ticks: { callback: function(value) { return formatRupiah(value); } } },
+                    y: { title: { display: true, text: 'Bulan-Tahun' } }
+                }
+            }
+        });
+    }
+
+    // E. HEATMAP MATRIX Update
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { monthNum: fraudCount } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            const month = report["Periode Laporan"];
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            heatmapData[year][month] = (heatmapData[year][month] || 0) + report["Jumlah Fraud"];
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = ''; // Clear existing rows
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            months.forEach(month => {
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                const fraudCount = heatmapData[year] ? (heatmapData[year][month] || 0) : 0;
+                cell.textContent = fraudCount;
+
+                // Simple color scale for heatmap (adjust as needed)
+                let bgColor = 'bg-white';
+                if (fraudCount > 0) {
+                    if (fraudCount >= 5) bgColor = 'bg-red-200';
+                    else if (fraudCount >= 3) bgColor = 'bg-yellow-200';
+                    else bgColor = 'bg-blue-100';
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Fraud: ${fraudCount} kasus`; // Tooltip
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // NEW: Function to update the Upload Status Map
+    function updateUploadStatusMap() {
+        const uploadStatusTableBody = document.getElementById('uploadStatusTable').querySelector('tbody');
+        uploadStatusTableBody.innerHTML = ''; // Clear existing rows
+
+        const years = Object.keys(monthlyUploadStatusData)
+            .map(key => monthlyUploadStatusData[key].year)
+            .filter((value, index, self) => self.indexOf(value) === index) // Get unique years
+            .sort((a, b) => a - b); // Sort years ascending
+
+        const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            months.forEach(monthNumStr => {
+                const periodKey = `${year}-${monthNumStr}`;
+                const status = monthlyUploadStatusData[periodKey]; // Get status for this month/year
+
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+
+                let cellContent = '';
+                let bgColor = 'bg-white'; // Default background
+                let tooltipText = '';
+
+                if (status) {
+                    if (status.uploaded) {
+                        if (status.days_late > 0) {
+                            // Sudah upload tapi terlambat (Oranye)
+                            bgColor = 'bg-orange-100';
+                            cellContent = `Terlambat (${status.days_late} hari)`; // Menambahkan jumlah hari terlambat
+                            tooltipText = `Uploaded: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                        } else {
+                            // Sudah upload dan tepat waktu (Hijau)
+                            bgColor = 'bg-green-100';
+                            cellContent = `Tepat Waktu`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Tepat Waktu)`;
+                        }
+                    } else {
+                        // Belum upload
+                        if (status.days_late !== null && status.days_late > 0) { // Jika sudah melewati jatuh tempo
+                            // Belum upload dan terlambat (Merah)
+                            bgColor = 'bg-red-200';
+                            cellContent = `Belum Upload (${status.days_late} hari)`; // Menambahkan jumlah hari terlambat
+                            tooltipText = `Belum Upload. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                        } else {
+                            // Belum upload dan belum jatuh tempo (Abu-abu/Putih)
+                            bgColor = 'bg-gray-100'; // Atau 'bg-white' jika tidak ingin warna
+                            cellContent = 'Belum Upload';
+                            tooltipText = `Belum Upload. Jatuh Tempo: ${status.due_date}`;
+                        }
+                    }
+                } else {
+                    // Data status tidak tersedia
+                    cellContent = 'N/A';
+                    tooltipText = 'Data tidak tersedia';
+                }
+
+                cell.innerHTML = cellContent;
+                cell.classList.add(bgColor);
+                cell.title = tooltipText;
+                row.appendChild(cell);
+            });
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data fraud yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const totalFraud = data.reduce((sum, report) => sum + report["Jumlah Fraud"], 0);
+        const totalPotensiKerugian = data.reduce((sum, report) => sum + report["Besar Potensi Kerugian"], 0);
+
+        // Find peak fraud month
+        const monthlyFraud = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyFraud[monthYear] = (monthlyFraud[monthYear] || 0) + report["Jumlah Fraud"];
+        });
+
+        let peakFraudMonth = "N/A";
+        let peakFraudCount = 0;
+        if (Object.keys(monthlyFraud).length > 0) {
+            peakFraudMonth = Object.keys(monthlyFraud).reduce((a, b) => monthlyFraud[a] > monthlyFraud[b] ? a : b);
+            peakFraudCount = monthlyFraud[peakFraudMonth];
+        }
+
+        // Find month with highest loss
+        const monthlyLoss = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyLoss[monthYear] = (monthlyLoss[monthYear] || 0) + report["Besar Potensi Kerugian"];
+        });
+
+        let peakLossMonth = "N/A";
+        let peakLossAmount = 0;
+        if (Object.keys(monthlyLoss).length > 0) {
+            peakLossMonth = Object.keys(monthlyLoss).reduce((a, b) => monthlyLoss[a] > monthlyLoss[b] ? a : b);
+            peakLossAmount = monthlyLoss[peakLossMonth];
+        }
+
+        const firstReport = data[0];
+        const lastReport = data[data.length - 1];
+        const startDateString = `${getMonthName(firstReport['Periode Laporan'])} ${firstReport['Tahun Laporan']}`;
+        const endDateString = `${getMonthName(lastReport['Periode Laporan'])} ${lastReport['Tahun Laporan']}`;
+
+        // Re-aggregate data to get sorted monthly summary for trend analysis
+        const monthlySummaryForTrend = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!monthlySummaryForTrend[monthYear]) {
+                monthlySummaryForTrend[monthYear] = { fraud: 0, loss: 0, date: new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1) };
+            }
+            monthlySummaryForTrend[monthYear].fraud += report["Jumlah Fraud"];
+            monthlySummaryForTrend[monthYear].loss += report["Besar Potensi Kerugian"];
+        });
+
+        const sortedMonthlySummaryForTrend = Object.keys(monthlySummaryForTrend)
+            .map(key => ({ label: key, fraud: monthlySummaryForTrend[key].fraud, loss: monthlySummaryForTrend[key].loss, date: monthlySummaryForTrend[key].date }))
+            .sort((a, b) => a.date - b.date);
+
+        // Calculate month-over-month changes
+        let maxIncrease = { month: 'N/A', value: 0 };
+        let maxDecrease = { month: 'N/A', value: 0 };
+        let trendInsight = "";
+
+        if (sortedMonthlySummaryForTrend.length > 1) {
+            for (let i = 1; i < sortedMonthlySummaryForTrend.length; i++) {
+                const currentMonthData = sortedMonthlySummaryForTrend[i];
+                const previousMonthData = sortedMonthlySummaryForTrend[i - 1];
+                const change = currentMonthData.fraud - previousMonthData.fraud;
+
+                if (change > maxIncrease.value) {
+                    maxIncrease = { month: currentMonthData.label, value: change };
+                }
+                if (change < maxDecrease.value) {
+                    maxDecrease = { month: currentMonthData.label, value: change };
+                }
+            }
+
+            if (maxIncrease.value > 0) {
+                trendInsight += `Peningkatan fraud terbesar terjadi pada <strong>${maxIncrease.month}</strong> dengan kenaikan <strong>${maxIncrease.value}</strong> kasus dari bulan sebelumnya. `;
+            }
+            if (maxDecrease.value < 0) {
+                trendInsight += `Penurunan fraud terbesar terjadi pada <strong>${maxDecrease.month}</strong> dengan penurunan <strong>${Math.abs(maxDecrease.value)}</strong> kasus dari bulan sebelumnya.`;
+            }
+            if (trendInsight === "") { // If no increase or decrease, implies stable
+                trendInsight = "Jumlah fraud cenderung stabil sepanjang periode ini.";
+            }
+        } else if (sortedMonthlySummaryForTrend.length === 1) {
+            trendInsight = "Hanya ada data untuk satu bulan, tidak dapat menganalisis tren.";
+        } else {
+            trendInsight = ""; // No data
+        }
+
+
+        summaryInsightText.innerHTML = `
+            Dalam periode <strong>${startDateString} &ndash; ${endDateString}</strong>, terjadi <strong>${totalFraud}</strong> kasus fraud
+            dengan total potensi kerugian sebesar <strong>${formatRupiah(totalPotensiKerugian)}</strong>.<br><br>
+            Puncak fraud terjadi pada <strong>${peakFraudMonth}</strong> (${peakFraudCount} kasus).
+            Bulan dengan kerugian tertinggi adalah <strong>${peakLossMonth}</strong> mencapai <strong>${formatRupiah(peakLossAmount)}</strong>.
+            <br><br>
+            ${trendInsight}
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = ''; // Clear existing rows
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="9" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan fraud yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        // Sort reports by date in descending order (most recent first) for the table
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], parseInt(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], parseInt(b["Periode Laporan"]) - 1);
+            return dateB - dateA;
+        });
+
+        // Get sandi_pjp from a global variable or directly from a hidden input if available
+        // For this context, we'll assume sandi_pjp is available in the global scope from Flask data.
+        const currentSandiPjp = "{{ sandi_pjp }}"; // Access sandi_pjp directly from Jinja context
+
+        // Display all filtered reports in the table
+        sortedForTable.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            // Construct the detail URL dynamically in JavaScript
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/fraud_report_detail/${report['Tahun Laporan']}/${report['Periode Laporan']}`;
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Sandi PJP'] || 'N/A'}</td> {# Display Sandi PJP #}
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Nomor Surat'] || 'N/A'}</td> {# Display Nomor Surat #}
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Tanggal Surat'] || 'N/A'}</td> {# Display Tanggal Surat #}
+                <td class="py-3 px-6 text-left whitespace-nowrap">${getMonthName(report["Periode Laporan"])}/${report["Tahun Laporan"]}</td>
+                <td class="py-3 px-6 text-left">${report["Jumlah Fraud"]}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report["Besar Potensi Kerugian"])}</td>
+                <td class="py-3 px-6 text-left">${report["Keterangan Fraud"]}</td>
+                <td class="py-3 px-6 text-left">${report["Keterangan Tindak Lanjut"]}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        // Prepare data for Excel
+        const dataForExcel = currentFilteredReports.map(report => ({
+            'Sandi PJP': report['Sandi PJP'],
+            'Nama PJP': "{{ pjp_name }}", // Assuming pjp_name is available in Jinja context
+            'Tahun Laporan': report['Tahun Laporan'],
+            'Periode Laporan': getMonthName(report['Periode Laporan']),
+            'Nomor Surat': report['Nomor Surat'],
+            'Tanggal Surat': report['Tanggal Surat'],
+            'Jumlah Fraud': report['Jumlah Fraud'],
+            'Besar Potensi Kerugian': report['Besar Potensi Kerugian'],
+            'Keterangan Fraud': report['Keterangan Fraud'],
+            'Keterangan Tindak Lanjut': report['Keterangan Tindak Lanjut'],
+            'File URL': report['File URL']
+        }));
+
+        // Create a workbook and a worksheet
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Fraud");
+
+        // Generate and download the Excel file
+        const fileName = `Laporan_Fraud_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial values for filters
+        document.getElementById('lossRange').value = maxLossInitial;
+        updateLossRangeLabel(maxLossInitial);
+
+        // Populate year dropdowns initially
+        populateYearDropdowns();
+        
+        // Initial render of the dashboard with all data
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            // Reset filter values to initial state
+            populateYearDropdowns(); // Re-populate to reset year dropdowns
+            
+            document.getElementById('startMonth').value = '01';
+            document.getElementById('endMonth').value = '12';
+            document.getElementById('lossRange').value = maxLossInitial;
+            updateLossRangeLabel(maxLossInitial);
+            document.getElementById('showInsightCheckbox').checked = false; // Uncheck insight
+            renderDashboard(); // Re-render with reset filters
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            generateSummaryInsight(allFraudReports); // Re-generate insight based on current filter state
+        });
+        document.getElementById('lossRange').addEventListener('input', function() {
+            updateLossRangeLabel(this.value);
+            // Optionally, apply filter on slider change immediately
+            // renderDashboard();
+        });
+
+        // Event listener for Export to Excel button
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+
+
+{% endblock %}

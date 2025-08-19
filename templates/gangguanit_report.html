@@ -1,0 +1,952 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan Gangguan IT - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Gangguan IT</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Awal:</label>
+            <select id="startMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}">{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Akhir:</label>
+            <select id="endMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}" {% if loop.last %}selected{% endif %}>{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col w-48">
+            <label for="lossRange" class="text-sm font-medium text-gray-700 mb-1">Potensi Kerugian Max:</label>
+            <input type="range" id="lossRange" min="0" max="50000000" value="50000000"
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" oninput="updateLossRangeLabel(this.value)">
+            <span id="lossRangeLabel" class="text-xs text-gray-500 mt-1 text-center">Max: Rp 50.000.000</span>
+        </div>
+        <div class="flex flex-col">
+            <label for="incidentType" class="text-sm font-medium text-gray-700 mb-1">Jenis Gangguan:</label>
+            <select id="incidentType" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Semua</option>
+                <option value="Perangkat Lunak">Perangkat Lunak</option>
+                <option value="Perangkat Keras">Perangkat Keras</option>
+                <option value="Jaringan">Jaringan</option>
+                <option value="Keamanan">Keamanan</option>
+                <option value="Listrik/Infrastruktur">Listrik/Infrastruktur</option>
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Insiden</p>
+            <p id="kpiTotalIncidents" class="text-3xl font-bold text-gray-800 mt-1">{{ kpis.total_incidents }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Total Potensi Kerugian</p>
+            <p id="kpiTotalPotentialLoss" class="text-3xl font-bold text-gray-800 mt-1">Rp {{ "{:,.0f}".format(kpis.total_potential_loss) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Jenis Gangguan Paling Umum</p>
+            <p id="kpiMostCommonIncidentType" class="text-xl font-bold text-gray-800 mt-1">{{ kpis.most_common_incident_type }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-gray-500">Rata-rata Kerugian/Insiden</p>
+            <p id="kpiAvgLossPerIncident" class="text-3xl font-bold text-gray-800 mt-1">Rp {{ "{:,.0f}".format(kpis.avg_loss_per_incident) }}</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Time Series) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Insiden IT per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="incidentTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Potensi Kerugian per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="lossTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Tren Insiden dan Potensi Kerugian per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Insiden dan Potensi Kerugian per Tahun</h3>
+        <div class="w-full h-80">
+            <canvas id="yearlyIncidentLossChart"></canvas>
+        </div>
+    </div>
+
+    <!-- D. TOP INSIGHT SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Top 5 Jenis Gangguan</h3>
+            <div class="w-full h-80">
+                <canvas id="topIncidentTypesChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Potensi Kerugian per Jenis Gangguan</h3>
+            <div class="w-full h-80">
+                <canvas id="lossDistributionByTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- E. HEATMAP MATRIX: Insiden Bulanan per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Jumlah Insiden IT Bulanan per Tahun</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- F. AUTO GENERATED INSIGHT -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan Gangguan IT -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan Gangguan IT</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat</th>
+                        <th class="py-3 px-6 text-left">Tanggal Laporan</th>
+                        <th class="py-3 px-6 text-left">Waktu Kejadian</th>
+                        <th class="py-3 px-6 text-left">Jenis Gangguan</th>
+                        <th class="py-3 px-6 text-left">Potensi Kerugian</th>
+                        <th class="py-3 px-6 text-left">Ringkasan</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="initial-dashboard-data-gangguanit">
+    {{ initial_dashboard_data_gangguanit | tojson | safe }}
+</script>
+<script type="application/json" id="available-years-gangguanit">
+    {{ available_years | tojson | safe }}
+</script>
+<script type="application/json" id="kpis-gangguanit">
+    {{ kpis | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script type="text/javascript">
+    // Global variables for charts to allow updating them
+    let incidentTrendChartInstance;
+    let lossTrendChartInstance;
+    let yearlyIncidentLossChartInstance;
+    let topIncidentTypesChartInstance;
+    let lossDistributionByTypeChartInstance;
+
+    // Data from Flask backend (all raw data for client-side filtering)
+    let allGangguanITReports;
+    let availableYearsInitial;
+    let kpisInitial;
+
+    try {
+        allGangguanITReports = JSON.parse(document.getElementById('initial-dashboard-data-gangguanit').textContent.trim());
+        console.log("Parsed allGangguanITReports:", allGangguanITReports, "Type:", typeof allGangguanITReports, "Is Array:", Array.isArray(allGangguanITReports));
+    } catch (e) {
+        console.error("Error parsing allGangguanITReports JSON:", e);
+        allGangguanITReports = [];
+    }
+
+    try {
+        availableYearsInitial = JSON.parse(document.getElementById('available-years-gangguanit').textContent.trim());
+        console.log("Parsed availableYearsInitial:", availableYearsInitial, "Type:", typeof availableYearsInitial, "Is Array:", Array.isArray(availableYearsInitial));
+    } catch (e) {
+        console.error("Error parsing availableYearsInitial JSON:", e);
+        availableYearsInitial = [];
+    }
+
+    try {
+        kpisInitial = JSON.parse(document.getElementById('kpis-gangguanit').textContent.trim());
+        console.log("Parsed kpisInitial:", kpisInitial, "Type:", typeof kpisInitial);
+    } catch (e) {
+        console.error("Error parsing kpisInitial JSON:", e);
+        kpisInitial = {};
+    }
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to format currency
+    function formatRupiah(amount) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari')
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    function getMonthName(monthNumStr) {
+        return monthNames[parseInt(monthNumStr, 10) - 1];
+    }
+    const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    function getMonthShortName(monthNumStr) {
+        return monthShortNames[parseInt(monthNumStr, 10) - 1];
+    }
+
+    // Function to update the loss range label
+    function updateLossRangeLabel(value) {
+        document.getElementById('lossRangeLabel').textContent = `Max: ${formatRupiah(parseInt(value))}`;
+    }
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const uniqueYears = [...new Set(allGangguanITReports.map(report => report["tahun_laporan"]))].sort((a, b) => a - b);
+
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startMonth = document.getElementById('startMonth').value;
+        const endMonth = document.getElementById('endMonth').value;
+        const maxLoss = parseInt(document.getElementById('lossRange').value);
+        const incidentType = document.getElementById('incidentType').value;
+
+        let filteredReports = allGangguanITReports.filter(report => {
+            const reportYear = parseInt(report["tahun_laporan"]);
+            const reportMonth = parseInt(report["bulan_laporan"]); // Month as number (1-12)
+            const reportDate = new Date(reportYear, reportMonth - 1);
+            const startDate = new Date(startYear, parseInt(startMonth) - 1);
+            const endDate = new Date(endYear, parseInt(endMonth) - 1);
+
+            const isDateInRange = reportDate >= startDate && reportDate <= endDate;
+            const isLossInRange = report["potensi_kerugian"] <= maxLoss;
+            const isTypeMatch = incidentType === "" || report["jenis_gangguan"] === incidentType;
+
+            return isDateInRange && isLossInRange && isTypeMatch;
+        });
+
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["tahun_laporan"], parseInt(a["bulan_laporan"]) - 1, a["tanggal_laporan"]);
+            const dateB = new Date(b["tahun_laporan"], parseInt(b["bulan_laporan"]) - 1, b["tanggal_laporan"]);
+            return dateA - dateB;
+        });
+
+        currentFilteredReports = filteredReports;
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateYearlyIncidentLossChart(filteredReports);
+        updateTopInsights(filteredReports);
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalIncidents = data.length;
+        const totalPotentialLoss = data.reduce((sum, report) => sum + (report["potensi_kerugian"] || 0), 0);
+        const avgLossPerIncident = totalIncidents > 0 ? totalPotentialLoss / totalIncidents : 0;
+
+        document.getElementById('kpiTotalIncidents').textContent = totalIncidents;
+        document.getElementById('kpiTotalPotentialLoss').textContent = formatRupiah(totalPotentialLoss);
+        document.getElementById('kpiAvgLossPerIncident').textContent = formatRupiah(avgLossPerIncident);
+
+        const incidentTypeCounts = {};
+        data.forEach(report => {
+            const type = report.jenis_gangguan || "Tidak Diketahui";
+            incidentTypeCounts[type] = (incidentTypeCounts[type] || 0) + 1;
+        });
+
+        let mostCommonIncidentType = "N/A";
+        if (Object.keys(incidentTypeCounts).length > 0) {
+            mostCommonIncidentType = Object.keys(incidentTypeCounts).reduce((a, b) => incidentTypeCounts[a] > incidentTypeCounts[b] ? a : b);
+        }
+        document.getElementById('kpiMostCommonIncidentType').textContent = mostCommonIncidentType;
+    }
+
+    // C. VISUALISASI UTAMA (Charts) Update
+    function updateCharts(data) {
+        const aggregatedData = {};
+        data.forEach(report => {
+            // Use waktu_kejadian for more precise monthly aggregation if available and consistent
+            const reportDate = new Date(report["waktu_kejadian"].split('T')[0]);
+            const label = `${getMonthShortName(String(reportDate.getMonth() + 1))} ${reportDate.getFullYear()}`;
+            if (!aggregatedData[label]) {
+                aggregatedData[label] = { 'incidents': 0, 'loss': 0, date: reportDate };
+            }
+            aggregatedData[label]['incidents'] += 1; // Each report is one incident
+            aggregatedData[label]['loss'] += (report["potensi_kerugian"] || 0);
+        });
+
+        const sortedAggregatedData = Object.keys(aggregatedData)
+            .map(key => ({ label: key, ...aggregatedData[key] }))
+            .sort((a, b) => a.date - b.date);
+
+        const chartLabels = sortedAggregatedData.map(item => item.label);
+        const chartIncidents = sortedAggregatedData.map(item => item['incidents']);
+        const chartLoss = sortedAggregatedData.map(item => item['loss']);
+
+        // Destroy existing chart instances before creating new ones
+        if (incidentTrendChartInstance) { incidentTrendChartInstance.destroy(); }
+        if (lossTrendChartInstance) { lossTrendChartInstance.destroy(); }
+        if (yearlyIncidentLossChartInstance) { yearlyIncidentLossChartInstance.destroy(); }
+        if (topIncidentTypesChartInstance) { topIncidentTypesChartInstance.destroy(); }
+        if (lossDistributionByTypeChartInstance) { lossDistributionByTypeChartInstance.destroy(); }
+
+
+        const ctx1 = document.getElementById('incidentTrendChart').getContext('2d');
+        incidentTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Insiden',
+                        data: chartIncidents,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Insiden' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+
+        const ctx2 = document.getElementById('lossTrendChart').getContext('2d');
+        lossTrendChartInstance = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Potensi Kerugian (Rp)',
+                        data: chartLoss,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += formatRupiah(context.raw);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Potensi Kerugian (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    }
+
+    // New function for Yearly Incident and Loss Chart
+    function updateYearlyIncidentLossChart(data) {
+        const yearlyData = {};
+        data.forEach(report => {
+            const year = report["tahun_laporan"];
+            if (!yearlyData[year]) {
+                yearlyData[year] = { 'incidents': 0, 'loss': 0 };
+            }
+            yearlyData[year]['incidents'] += 1;
+            yearlyData[year]['loss'] += (report["potensi_kerugian"] || 0);
+        });
+
+        const sortedYearlyData = Object.keys(yearlyData)
+            .map(year => ({ year: year, ...yearlyData[year] }))
+            .sort((a, b) => a.year - b.year);
+
+        const chartLabels = sortedYearlyData.map(item => item.year);
+        const chartIncidents = sortedYearlyData.map(item => item['incidents']);
+        const chartLoss = sortedYearlyData.map(item => item['loss']);
+
+        if (yearlyIncidentLossChartInstance) { yearlyIncidentLossChartInstance.destroy(); }
+        const ctx = document.getElementById('yearlyIncidentLossChart').getContext('2d');
+        yearlyIncidentLossChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Insiden per Tahun',
+                        data: chartIncidents,
+                        backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y-incidents'
+                    },
+                    {
+                        label: 'Potensi Kerugian per Tahun (Rp)',
+                        data: chartLoss,
+                        backgroundColor: 'rgba(255, 205, 86, 0.7)', // Yellow
+                        borderColor: 'rgba(255, 205, 86, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y-loss'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.dataset.label.includes('Kerugian')) label += formatRupiah(context.raw);
+                                else label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    'y-incidents': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Insiden' },
+                        ticks: { precision: 0 }
+                    },
+                    'y-loss': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Potensi Kerugian (Rp)' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    }
+
+    // D. TOP INSIGHT SECTION Update
+    function updateTopInsights(data) {
+        const incidentTypeCounts = {};
+        const lossByType = {};
+
+        data.forEach(report => {
+            const type = report.jenis_gangguan || "Tidak Diketahui";
+            incidentTypeCounts[type] = (incidentTypeCounts[type] || 0) + 1;
+            lossByType[type] = (lossByType[type] || 0) + (report.potensi_kerugian || 0);
+        });
+
+        // Top 5 Jenis Gangguan
+        const sortedIncidentTypes = Object.keys(incidentTypeCounts)
+            .map(key => ({ type: key, count: incidentTypeCounts[key] }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        
+        const topIncidentTypeLabels = sortedIncidentTypes.map(item => item.type);
+        const topIncidentTypeData = sortedIncidentTypes.map(item => item.count);
+
+        if (topIncidentTypesChartInstance) { topIncidentTypesChartInstance.destroy(); }
+        const ctx3 = document.getElementById('topIncidentTypesChart').getContext('2d');
+        topIncidentTypesChartInstance = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: topIncidentTypeLabels,
+                datasets: [{
+                    label: 'Jumlah Insiden',
+                    data: topIncidentTypeData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)', // Purple-500
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Jumlah Insiden' }, ticks: { precision: 0 } },
+                    y: { title: { display: true, text: 'Jenis Gangguan' } }
+                }
+            }
+        });
+
+        // Distribusi Potensi Kerugian per Jenis Gangguan
+        const lossDistributionLabels = Object.keys(lossByType);
+        const lossDistributionData = Object.values(lossByType);
+
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)', // Red
+            'rgba(54, 162, 235, 0.7)', // Blue
+            'rgba(255, 205, 86, 0.7)', // Yellow
+            'rgba(75, 192, 192, 0.7)', // Green
+            'rgba(153, 102, 255, 0.7)', // Purple
+            'rgba(255, 159, 64, 0.7)'  // Orange
+        ];
+
+        if (lossDistributionByTypeChartInstance) { lossDistributionByTypeChartInstance.destroy(); }
+        const ctx4 = document.getElementById('lossDistributionByTypeChart').getContext('2d');
+        lossDistributionByTypeChartInstance = new Chart(ctx4, {
+            type: 'doughnut',
+            data: {
+                labels: lossDistributionLabels,
+                datasets: [{
+                    data: lossDistributionData,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                label += formatRupiah(context.raw);
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // E. HEATMAP MATRIX Update
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { monthNum: incidentCount } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["tahun_laporan"];
+            const month = report["bulan_laporan"];
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            heatmapData[year][month] = (heatmapData[year][month] || 0) + 1; // Count each report as one incident
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = ''; // Clear existing rows
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            months.forEach(month => {
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                const incidentCount = heatmapData[year] ? (heatmapData[year][month] || 0) : 0;
+                cell.textContent = incidentCount;
+
+                // Simple color scale for heatmap (adjust as needed)
+                let bgColor = 'bg-white';
+                if (incidentCount > 0) {
+                    if (incidentCount >= 3) bgColor = 'bg-red-200';
+                    else if (incidentCount >= 1) bgColor = 'bg-yellow-200';
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Insiden: ${incidentCount} kasus`; // Tooltip
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data gangguan IT yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const totalIncidents = data.length;
+        const totalPotentialLoss = data.reduce((sum, report) => sum + (report["potensi_kerugian"] || 0), 0);
+
+        // Find peak incident month
+        const monthlyIncidents = {};
+        data.forEach(report => {
+            const reportDate = new Date(report["waktu_kejadian"].split('T')[0]);
+            const monthYear = `${getMonthName(String(reportDate.getMonth() + 1))} ${reportDate.getFullYear()}`;
+            monthlyIncidents[monthYear] = (monthlyIncidents[monthYear] || 0) + 1;
+        });
+
+        let peakIncidentMonth = "N/A";
+        let peakIncidentCount = 0;
+        if (Object.keys(monthlyIncidents).length > 0) {
+            peakIncidentMonth = Object.keys(monthlyIncidents).reduce((a, b) => monthlyIncidents[a] > monthlyIncidents[b] ? a : b);
+            peakIncidentCount = monthlyIncidents[peakIncidentMonth];
+        }
+
+        const firstReportDate = data.length > 0 ? new Date(data[0]["waktu_kejadian"].split('T')[0]) : null;
+        const lastReportDate = data.length > 0 ? new Date(data[data.length - 1]["waktu_kejadian"].split('T')[0]) : null;
+        
+        const startDateString = firstReportDate ? `${getMonthName(String(firstReportDate.getMonth() + 1))} ${firstReportDate.getFullYear()}` : "N/A";
+        const endDateString = lastReportDate ? `${getMonthName(String(lastReportDate.getMonth() + 1))} ${lastReportDate.getFullYear()}` : "N/A";
+
+        // Trend analysis
+        const monthlySummaryForTrend = {};
+        data.forEach(report => {
+            const reportDate = new Date(report["waktu_kejadian"].split('T')[0]);
+            const monthYear = `${getMonthName(String(reportDate.getMonth() + 1))} ${reportDate.getFullYear()}`;
+            if (!monthlySummaryForTrend[monthYear]) {
+                monthlySummaryForTrend[monthYear] = { count: 0, date: reportDate };
+            }
+            monthlySummaryForTrend[monthYear].count += 1;
+        });
+
+        const sortedMonthlySummaryForTrend = Object.keys(monthlySummaryForTrend)
+            .map(key => ({ label: key, count: monthlySummaryForTrend[key].count, date: monthlySummaryForTrend[key].date }))
+            .sort((a, b) => a.date - b.date);
+
+        let maxIncrease = { month: 'N/A', value: 0 };
+        let maxDecrease = { month: 'N/A', value: 0 };
+        let trendInsight = "";
+
+        if (sortedMonthlySummaryForTrend.length > 1) {
+            for (let i = 1; i < sortedMonthlySummaryForTrend.length; i++) {
+                const currentMonthData = sortedMonthlySummaryForTrend[i];
+                const previousMonthData = sortedMonthlySummaryForTrend[i - 1];
+                const change = currentMonthData.count - previousMonthData.count;
+
+                if (change > maxIncrease.value) {
+                    maxIncrease = { month: currentMonthData.label, value: change };
+                }
+                if (change < maxDecrease.value) {
+                    maxDecrease = { month: currentMonthData.label, value: change };
+                }
+            }
+
+            if (maxIncrease.value > 0) {
+                trendInsight += `Peningkatan insiden terbesar terjadi pada <strong>${maxIncrease.month}</strong> dengan kenaikan <strong>${maxIncrease.value}</strong> kasus dari bulan sebelumnya. `;
+            }
+            if (maxDecrease.value < 0) {
+                trendInsight += `Penurunan insiden terbesar terjadi pada <strong>${maxDecrease.month}</strong> dengan penurunan <strong>${Math.abs(maxDecrease.value)}</strong> kasus dari bulan sebelumnya.`;
+            }
+            if (trendInsight === "") {
+                trendInsight = "Jumlah insiden cenderung stabil sepanjang periode ini.";
+            }
+        } else if (sortedMonthlySummaryForTrend.length === 1) {
+            trendInsight = "Hanya ada data untuk satu bulan, tidak dapat menganalisis tren.";
+        } else {
+            trendInsight = "";
+        }
+
+        summaryInsightText.innerHTML = `
+            Dalam periode <strong>${startDateString} &ndash; ${endDateString}</strong>, terdapat total <strong>${totalIncidents}</strong> insiden IT yang dilaporkan
+            dengan total potensi kerugian sebesar <strong>${formatRupiah(totalPotentialLoss)}</strong>.<br><br>
+            Puncak insiden terjadi pada <strong>${peakIncidentMonth}</strong> (${peakIncidentCount} kasus).
+            <br><br>
+            ${trendInsight}
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="8" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan gangguan IT yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["waktu_kejadian"].split('T')[0]);
+            const dateB = new Date(b["waktu_kejadian"].split('T')[0]);
+            return dateB - dateA; // Descending order (most recent first)
+        });
+
+        const currentSandiPjp = "{{ sandi_pjp }}";
+
+        sortedForTable.forEach(report => {
+            const reportDate = new Date(report["waktu_kejadian"].split('T')[0]);
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/gangguanit_report_detail/${report['tahun_laporan']}/${String(reportDate.getMonth() + 1)}/${report['tanggal_laporan']}/${report['nomor_surat']}`;
+
+            row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['sandi_pjp'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['nomor_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['tanggal_laporan']}/${report['bulan_laporan']}/${report['tahun_laporan']}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['waktu_kejadian'] ? report['waktu_kejadian'].split('T')[1].split('+')[0] : 'N/A'}</td>
+                <td class="py-3 px-6 text-left">${report["jenis_gangguan"] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report["potensi_kerugian"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${report["ringkasan"] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            showCustomAlert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        const dataForExcel = currentFilteredReports.map(report => ({
+            'Sandi PJP': report['sandi_pjp'],
+            'Nama PJP': "{{ pjp_name }}",
+            'Tahun Laporan': report['tahun_laporan'],
+            'Bulan Laporan': getMonthName(report['bulan_laporan']),
+            'Tanggal Laporan': report['tanggal_laporan'],
+            'Nomor Surat': report['nomor_surat'],
+            'Tanggal Surat': report['tanggal_surat'],
+            'Waktu Kejadian': report['waktu_kejadian'],
+            'Jenis Gangguan': report['jenis_gangguan'],
+            'Ringkasan': report['ringkasan'],
+            'Potensi Kerugian': report['potensi_kerugian'],
+            'Upaya Perbaikan': report['upaya_perbaikan'],
+            'Tanggal Penyelesaian': report['tanggal_penyelesaian'],
+            'File URL': report['file_url'],
+            'Created At': report['created_at']
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Gangguan IT");
+
+        const fileName = `Laporan_Gangguan_IT_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Custom Alert/Modal Function
+    function showCustomAlert(message) {
+        let alertModal = document.getElementById('customAlertModal');
+        if (!alertModal) {
+            alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden';
+            alertModal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <p id="customAlertMessage" class="text-gray-800 text-lg mb-4"></p>
+                    <button id="customAlertCloseBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg float-right">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                alertModal.classList.add('hidden');
+            });
+        }
+        document.getElementById('customAlertMessage').textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        populateYearDropdowns();
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            populateYearDropdowns();
+            document.getElementById('startMonth').value = '01';
+            document.getElementById('endMonth').value = '12';
+            document.getElementById('lossRange').value = 50000000; // Reset max loss
+            updateLossRangeLabel(50000000);
+            document.getElementById('incidentType').value = ''; // Reset incident type
+            document.getElementById('showInsightCheckbox').checked = false;
+            renderDashboard();
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            renderDashboard();
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+{% endblock %}

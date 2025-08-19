@@ -1,0 +1,926 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan Keuangan Triwulanan - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Keuangan Triwulanan</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {# Options populated by JavaScript #}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startQuarter" class="text-sm font-medium text-gray-700 mb-1">Triwulan Awal:</label>
+            <select id="startQuarter" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endQuarter" class="text-sm font-medium text-gray-700 mb-1">Triwulan Akhir:</label>
+            <select id="endQuarter" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4" selected>Q4</option>
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-blue-100 border-b-4 border-blue-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-blue-700">Total Aset (Terbaru)</p>
+            <p id="kpiTotalAset" class="text-3xl font-bold text-blue-900 mt-1">Rp {{ "{:,.0f}".format(kpis.total_aset) }}</p>
+        </div>
+        <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-green-700">Total Pendapatan (Periode Filter)</p>
+            <p id="kpiTotalPendapatan" class="text-3xl font-bold text-green-900 mt-1">Rp {{ "{:,.0f}".format(kpis.total_pendapatan) }}</p>
+        </div>
+        <div class="bg-red-100 border-b-4 border-red-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-red-700">Total Beban (Periode Filter)</p>
+            <p id="kpiTotalBeban" class="text-3xl font-bold text-red-900 mt-1">Rp {{ "{:,.0f}".format(kpis.total_beban) }}</p>
+        </div>
+        <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-purple-700">Laba/Rugi Bersih (Periode Filter)</p>
+            <p id="kpiLabaRugiBersih" class="text-3xl font-bold text-purple-900 mt-1">Rp {{ "{:,.0f}".format(kpis.laba_rugi_bersih) }}</p>
+        </div>
+    </div>
+
+    <!-- Rasio Keuangan Penting -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-yellow-100 border-b-4 border-yellow-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-yellow-700">Rasio Lancar (Current Ratio)</p>
+            <p id="kpiRasioLancar" class="text-3xl font-bold text-yellow-900 mt-1">{{ "{:,.2f}".format(kpis.rasio_lancar) }}x</p>
+        </div>
+        <div class="bg-teal-100 border-b-4 border-teal-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-teal-700">Rasio Utang terhadap Ekuitas</p>
+            <p id="kpiRasioHutangEkuitas" class="text-3xl font-bold text-teal-900 mt-1">{{ "{:,.2f}".format(kpis.rasio_hutang_ekuitas) }}x</p>
+        </div>
+        <div class="bg-indigo-100 border-b-4 border-indigo-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+            <p class="text-sm font-medium text-indigo-700">Marjin Laba (Profit Margin)</p>
+            <p id="kpiMarjinLaba" class="text-3xl font-bold text-indigo-900 mt-1">{{ "{:,.2f}".format(kpis.marjin_laba * 100) }}%</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Tren Aset, Hutang, Ekuitas) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Aset, Hutang, dan Ekuitas per Triwulan</h3>
+            <div class="w-full h-80">
+                <canvas id="balanceSheetTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Pendapatan, Beban, dan Laba/Rugi per Triwulan</h3>
+            <div class="w-full h-80">
+                <canvas id="incomeStatementTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal dan Pendapatan/Beban Breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Modal Dasar vs Disetor per Triwulan</h3>
+            <div class="w-full h-80">
+                <canvas id="modalTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Pendapatan dan Beban Operasional per Triwulan</h3>
+            <div class="w-full h-80">
+                <canvas id="incomeExpenseBreakdownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Komposisi Keuangan -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Komposisi Aset (Terbaru)</h3>
+            <div class="w-full h-80">
+                <canvas id="assetCompositionChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Komposisi Hutang (Terbaru)</h3>
+            <div class="w-full h-80">
+                <canvas id="liabilityCompositionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heatmap Laba/Rugi per Triwulan -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Laba/Rugi Bersih per Triwulan</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        <th class="py-3 px-6 text-center">Q1</th>
+                        <th class="py-3 px-6 text-center">Q2</th>
+                        <th class="py-3 px-6 text-center">Q3</th>
+                        <th class="py-3 px-6 text-center">Q4</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Upload Laporan Keuangan Triwulanan</h3>
+        <div class="overflow-x-auto">
+            <table id="uploadStatusTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        <th class="py-3 px-6 text-center">Q1</th>
+                        <th class="py-3 px-6 text-center">Q2</th>
+                        <th class="py-3 px-6 text-center">Q3</th>
+                        <th class="py-3 px-6 text-center">Q4</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- F. AUTO GENERATED INSIGHT -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan Keuangan Triwulanan -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan Keuangan Triwulanan</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat</th>
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th>
+                        <th class="py-3 px-6 text-left">Periode</th>
+                        <th class="py-3 px-6 text-left">Total Aset</th>
+                        <th class="py-3 px-6 text-left">Total Hutang</th>
+                        <th class="py-3 px-6 text-left">Total Ekuitas</th>
+                        <th class="py-3 px-6 text-left">Laba/Rugi Bersih</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="initial-dashboard-data-keuangan">
+    {{ initial_dashboard_data_keuangan | tojson | safe }}
+</script>
+<script type="application/json" id="available-years-keuangan">
+    {{ available_years | tojson | safe }}
+</script>
+<script type="application/json" id="kpis-keuangan">
+    {{ kpis | tojson | safe }}
+</script>
+<script type="application/json" id="monthly-upload-status-keuangan">
+    {{ monthly_upload_status_keuangan | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script type="text/javascript">
+    // Global variables for charts to allow updating them
+    let balanceSheetTrendChartInstance;
+    let incomeStatementTrendChartInstance;
+    let modalTrendChartInstance; // New chart instance
+    let incomeExpenseBreakdownChartInstance; // New chart instance
+    let assetCompositionChartInstance;
+    let liabilityCompositionChartInstance;
+
+    // Data from Flask backend
+    let allKeuanganReports;
+    let availableYearsInitial;
+    let kpisInitial;
+    let monthlyUploadStatusData; // Renamed for clarity in this context
+
+    try {
+        allKeuanganReports = JSON.parse(document.getElementById('initial-dashboard-data-keuangan').textContent.trim());
+        console.log("Parsed allKeuanganReports:", allKeuanganReports, "Type:", typeof allKeuanganReports, "Is Array:", Array.isArray(allKeuanganReports));
+    } catch (e) {
+        console.error("Error parsing allKeuanganReports JSON:", e);
+        allKeuanganReports = [];
+    }
+
+    try {
+        availableYearsInitial = JSON.parse(document.getElementById('available-years-keuangan').textContent.trim());
+        console.log("Parsed availableYearsInitial:", availableYearsInitial, "Type:", typeof availableYearsInitial, "Is Array:", Array.isArray(availableYearsInitial));
+    } catch (e) {
+        console.error("Error parsing availableYearsInitial JSON:", e);
+        availableYearsInitial = [];
+    }
+
+    try {
+        kpisInitial = JSON.parse(document.getElementById('kpis-keuangan').textContent.trim());
+        console.log("Parsed kpisInitial:", kpisInitial, "Type:", typeof kpisInitial);
+    } catch (e) {
+        console.error("Error parsing kpisInitial JSON:", e);
+        kpisInitial = {};
+    }
+
+    try {
+        monthlyUploadStatusData = JSON.parse(document.getElementById('monthly-upload-status-keuangan').textContent.trim());
+        console.log("Parsed monthlyUploadStatusData (Keuangan):", monthlyUploadStatusData, "Type:", typeof monthlyUploadStatusData);
+    } catch (e) {
+        console.error("Error parsing monthlyUploadStatusData (Keuangan) JSON:", e);
+        monthlyUploadStatusData = {};
+    }
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to format currency
+    function formatRupiah(amount) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    // Helper to get month number from quarter name for sorting
+    function getQuarterStartMonth(quarter) {
+        switch (quarter) {
+            case 'Q1': return 1; // Januari
+            case 'Q2': return 4; // April
+            case 'Q3': return 7; // Juli
+            case 'Q4': return 10; // Oktober
+            default: return 0;
+        }
+    }
+
+    // Function to update the loss range label (if applicable, though not directly used for financial reports)
+    function updateLossRangeLabel(value) {
+        // This function might not be strictly necessary for financial reports unless a specific numeric filter is added
+        // document.getElementById('lossRangeLabel').textContent = `Max: ${formatRupiah(parseInt(value))}`;
+    }
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+
+        const uniqueYears = [...new Set(allKeuanganReports.map(report => report["tahun_laporan"]))].sort((a, b) => a - b);
+
+        startYearSelect.innerHTML = '';
+        endYearSelect.innerHTML = '';
+
+        if (uniqueYears.length > 0) {
+            uniqueYears.forEach(year => {
+                const optionStart = document.createElement('option');
+                optionStart.value = year;
+                optionStart.textContent = year;
+                startYearSelect.appendChild(optionStart);
+
+                const optionEnd = document.createElement('option');
+                optionEnd.value = year;
+                optionEnd.textContent = year;
+                endYearSelect.appendChild(optionEnd);
+            });
+            startYearSelect.value = uniqueYears[0];
+            endYearSelect.value = uniqueYears[uniqueYears.length - 1];
+            startYearSelect.disabled = false;
+            endYearSelect.disabled = false;
+        } else {
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startQuarter = document.getElementById('startQuarter').value;
+        const endQuarter = document.getElementById('endQuarter').value;
+
+        let filteredReports = allKeuanganReports.filter(report => {
+            const reportYear = parseInt(report["tahun_laporan"]);
+            const reportQuarter = report["periode_laporan_nama"];
+
+            // Convert quarter to a comparable numeric value (e.g., Q1=1, Q2=2, Q3=3, Q4=4)
+            const getQuarterNumeric = (q) => parseInt(q.replace('Q', ''));
+
+            const reportQuarterNum = getQuarterNumeric(reportQuarter);
+            const startQuarterNum = getQuarterNumeric(startQuarter);
+            const endQuarterNum = getQuarterNumeric(endQuarter);
+
+            if (reportYear < startYear || reportYear > endYear) {
+                return false;
+            }
+
+            if (reportYear === startYear && reportQuarterNum < startQuarterNum) {
+                return false;
+            }
+            if (reportYear === endYear && reportQuarterNum > endQuarterNum) {
+                return false;
+            }
+            
+            return true;
+        });
+
+        // Sort by year and then by quarter numerically
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["tahun_laporan"], getQuarterStartMonth(a["periode_laporan_nama"]) - 1);
+            const dateB = new Date(b["tahun_laporan"], getQuarterStartMonth(b["periode_laporan_nama"]) - 1);
+            return dateA - dateB;
+        });
+
+        currentFilteredReports = filteredReports;
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateCompositionCharts(filteredReports);
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        generateSummaryInsight(filteredReports);
+        updateUploadStatusMap(); // Call new upload status map
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        // For KPIs, usually we want the latest available data in the filtered range
+        const latestReport = data.length > 0 ? data[data.length - 1] : {};
+
+        document.getElementById('kpiTotalAset').textContent = formatRupiah(latestReport.total_aset || 0);
+
+        // Sum for period for income statement items
+        const totalPendapatanFiltered = data.reduce((sum, r) => sum + (r.total_pendapatan || 0), 0);
+        const totalBebanFiltered = data.reduce((sum, r) => sum + (r.total_beban || 0), 0);
+        const labaRugiBersihFiltered = data.reduce((sum, r) => sum + (r.laba || 0) - (r.rugi || 0), 0);
+
+        document.getElementById('kpiTotalPendapatan').textContent = formatRupiah(totalPendapatanFiltered);
+        document.getElementById('kpiTotalBeban').textContent = formatRupiah(totalBebanFiltered);
+        document.getElementById('kpiLabaRugiBersih').textContent = formatRupiah(labaRugiBersihFiltered);
+
+        // Rasio Keuangan (berdasarkan laporan TERBARU di filter)
+        const currentAssets = latestReport.aset_lancar || 0;
+        const currentLiabilities = latestReport.hutang_jangka_pendek || 0;
+        const totalDebt = latestReport.total_hutang || 0;
+        const totalEquity = latestReport.total_ekuitas || 0;
+        const totalRevenue = latestReport.total_pendapatan || 0;
+        // Corrected: Use labaRugiBersihFiltered for the latest net income for ratio calculation
+        const netIncomeForRatio = (latestReport.laba || 0) - (latestReport.rugi || 0);
+
+
+        const rasioLancar = (currentLiabilities > 0) ? (currentAssets / currentLiabilities) : 0;
+        const rasioHutangEkuitas = (totalEquity > 0) ? (totalDebt / totalEquity) : 0;
+        const marjinLaba = (totalRevenue > 0) ? (netIncomeForRatio / totalRevenue) : 0; // Corrected to use netIncomeForRatio
+
+        document.getElementById('kpiRasioLancar').textContent = `${rasioLancar.toFixed(2)}x`;
+        document.getElementById('kpiRasioHutangEkuitas').textContent = `${rasioHutangEkuitas.toFixed(2)}x`;
+        document.getElementById('kpiMarjinLaba').textContent = `${(marjinLaba * 100).toFixed(2)}%`;
+    }
+
+    // C. VISUALISASI UTAMA (Tren) Update
+    function updateCharts(data) {
+        const chartLabels = data.map(report => `${report.periode_laporan_nama} ${report.tahun_laporan}`);
+        
+        // Data for Balance Sheet Trend
+        const totalAset = data.map(report => report.total_aset || 0);
+        const totalHutang = data.map(report => report.total_hutang || 0);
+        const totalEkuitas = data.map(report => report.total_ekuitas || 0);
+
+        if (balanceSheetTrendChartInstance) { balanceSheetTrendChartInstance.destroy(); }
+        const ctx1 = document.getElementById('balanceSheetTrendChart').getContext('2d');
+        balanceSheetTrendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Total Aset', data: totalAset, borderColor: 'rgb(75, 192, 192)', fill: false, tension: 0.1 },
+                    { label: 'Total Hutang', data: totalHutang, borderColor: 'rgb(255, 99, 132)', fill: false, tension: 0.1 },
+                    { label: 'Total Ekuitas', data: totalEkuitas, borderColor: 'rgb(54, 162, 235)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } } },
+                scales: { x: { title: { display: true, text: 'Periode Laporan' } }, y: { beginAtZero: true, title: { display: true, text: 'Jumlah (Rp)' }, ticks: { callback: function(value) { return formatRupiah(value); } } } }
+            }
+        });
+
+        // Data for Income Statement Trend
+        const totalPendapatan = data.map(report => report.total_pendapatan || 0);
+        const totalBeban = data.map(report => report.total_beban || 0);
+        const labaRugiBersih = data.map(report => (report.laba || 0) - (report.rugi || 0));
+
+        if (incomeStatementTrendChartInstance) { incomeStatementTrendChartInstance.destroy(); }
+        const ctx2 = document.getElementById('incomeStatementTrendChart').getContext('2d');
+        incomeStatementTrendChartInstance = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Total Pendapatan', data: totalPendapatan, borderColor: 'rgb(34, 197, 94)', fill: false, tension: 0.1 },
+                    { label: 'Total Beban', data: totalBeban, borderColor: 'rgb(239, 68, 68)', fill: false, tension: 0.1 },
+                    { label: 'Laba/Rugi Bersih', data: labaRugiBersih, borderColor: 'rgb(139, 92, 246)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } } },
+                scales: { x: { title: { display: true, text: 'Periode Laporan' } }, y: { beginAtZero: true, title: { display: true, text: 'Jumlah (Rp)' }, ticks: { callback: function(value) { return formatRupiah(value); } } } }
+            }
+        });
+
+        // Modal Trend Chart
+        const modalDasar = data.map(report => report.modal_dasar || 0);
+        const modalDisetor = data.map(report => report.modal_disetor || 0);
+        if (modalTrendChartInstance) { modalTrendChartInstance.destroy(); }
+        const ctxModal = document.getElementById('modalTrendChart').getContext('2d');
+        modalTrendChartInstance = new Chart(ctxModal, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Modal Dasar', data: modalDasar, borderColor: 'rgb(255, 205, 86)', fill: false, tension: 0.1 },
+                    { label: 'Modal Disetor', data: modalDisetor, borderColor: 'rgb(255, 159, 64)', fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } } },
+                scales: { x: { title: { display: true, text: 'Periode Laporan' } }, y: { beginAtZero: true, title: { display: true, text: 'Jumlah (Rp)' }, ticks: { callback: function(value) { return formatRupiah(value); } } } }
+            }
+        });
+
+        // Income/Expense Breakdown Chart (Bar chart for selected period or aggregated)
+        const totalPendapatanFee = data.map(report => report.pendapatan_fee || 0);
+        const totalBebanOperasional = data.map(report => report.beban_operasional || 0);
+
+        if (incomeExpenseBreakdownChartInstance) { incomeExpenseBreakdownChartInstance.destroy(); }
+        const ctxBreakdown = document.getElementById('incomeExpenseBreakdownChart').getContext('2d');
+        incomeExpenseBreakdownChartInstance = new Chart(ctxBreakdown, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Pendapatan Fee', data: totalPendapatanFee, backgroundColor: 'rgba(75, 192, 192, 0.7)' },
+                    { label: 'Beban Operasional', data: totalBebanOperasional, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatRupiah(context.raw)}` } } },
+                scales: { x: { title: { display: true, text: 'Periode Laporan' } }, y: { beginAtZero: true, title: { display: true, text: 'Jumlah (Rp)' }, ticks: { callback: function(value) { return formatRupiah(value); } } } }
+            }
+        });
+    }
+
+    // Komposisi Keuangan (berdasarkan laporan TERBARU di filter)
+    function updateCompositionCharts(data) {
+        const latestReport = data.length > 0 ? data[data.length - 1] : {};
+
+        const asetLancar = latestReport.aset_lancar || 0;
+        const asetTetap = latestReport.aset_tetap || 0;
+        const hutangJangkaPendek = latestReport.hutang_jangka_pendek || 0;
+        const hutangJangkaPanjang = latestReport.hutang_jangka_panjang || 0;
+
+        // Asset Composition
+        if (assetCompositionChartInstance) { assetCompositionChartInstance.destroy(); }
+        const ctx3 = document.getElementById('assetCompositionChart').getContext('2d');
+        assetCompositionChartInstance = new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aset Lancar', 'Aset Tetap'],
+                datasets: [{
+                    data: [asetLancar, asetTetap],
+                    backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(75, 192, 192, 0.7)'],
+                    borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } } }
+            }
+        });
+
+        // Liability Composition
+        if (liabilityCompositionChartInstance) { liabilityCompositionChartInstance.destroy(); }
+        const ctx4 = document.getElementById('liabilityCompositionChart').getContext('2d');
+        liabilityCompositionChartInstance = new Chart(ctx4, {
+            type: 'doughnut',
+            data: {
+                labels: ['Hutang Jangka Pendek', 'Hutang Jangka Panjang'],
+                datasets: [{
+                    data: [hutangJangkaPendek, hutangJangkaPanjang],
+                    backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(255, 159, 64, 0.7)'],
+                    borderColor: ['rgba(255, 99, 132, 1)', 'rgba(255, 159, 64, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => `${context.label}: ${formatRupiah(context.raw)}` } } }
+            }
+        });
+    }
+
+    // Heatmap Laba/Rugi per Triwulan
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { quarter: labaRugiBersih } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["tahun_laporan"];
+            const quarter = report["periode_laporan_nama"];
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            heatmapData[year][quarter] = (report.laba || 0) - (report.rugi || 0);
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const quarters = ["Q1", "Q2", "Q3", "Q4"];
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = '';
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="5" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            quarters.forEach(quarter => {
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                const labaRugi = heatmapData[year] ? (heatmapData[year][quarter] || 0) : 0;
+                cell.textContent = formatRupiah(labaRugi);
+
+                let bgColor = 'bg-white';
+                if (labaRugi > 0) {
+                    bgColor = 'bg-green-100'; // Laba
+                } else if (labaRugi < 0) {
+                    bgColor = 'bg-red-100'; // Rugi
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Laba/Rugi: ${formatRupiah(labaRugi)}`;
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // NEW: Function to update the Upload Status Map
+    function updateUploadStatusMap() {
+        const uploadStatusTableBody = document.getElementById('uploadStatusTable').querySelector('tbody');
+        uploadStatusTableBody.innerHTML = '';
+
+        const years = Object.keys(monthlyUploadStatusData)
+            .map(key => parseInt(key.split('-')[0]))
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .sort((a, b) => a - b);
+
+        const quarters = ["Q1", "Q2", "Q3", "Q4"];
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="5" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            quarters.forEach(quarterName => {
+                const periodKey = `${year}-${quarterName}`; 
+                const status = monthlyUploadStatusData[periodKey];
+
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+
+                let cellContent = '';
+                let bgColor = 'bg-white';
+                let tooltipText = '';
+
+                if (status) {
+                    if (status.uploaded) {
+                        if (status.days_late > 0) {
+                            bgColor = 'bg-orange-100';
+                            cellContent = `Terlambat (${status.days_late} hari)`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                        } else {
+                            bgColor = 'bg-green-100';
+                            cellContent = `Tepat Waktu`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Tepat Waktu)`;
+                        }
+                    } else {
+                        if (status.days_late !== null && status.days_late > 0) {
+                            bgColor = 'bg-red-200';
+                            cellContent = `Belum Upload (${status.days_late} hari)`;
+                            tooltipText = `Belum Upload. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                        } else {
+                            bgColor = 'bg-gray-100';
+                            cellContent = 'Belum Upload';
+                            tooltipText = `Belum Upload. Jatuh Tempo: ${status.due_date}`;
+                        }
+                    }
+                } else {
+                    cellContent = 'N/A';
+                    tooltipText = 'Data tidak tersedia';
+                }
+
+                cell.innerHTML = cellContent;
+                cell.classList.add(bgColor);
+                cell.title = tooltipText;
+                row.appendChild(cell);
+            });
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data keuangan triwulanan yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const latestReport = data[data.length - 1];
+        const totalPendapatanFiltered = data.reduce((sum, r) => sum + (r.total_pendapatan || 0), 0);
+        const totalBebanFiltered = data.reduce((sum, r) => sum + (r.total_beban || 0), 0);
+        const labaRugiBersihFiltered = data.reduce((sum, r) => sum + (r.laba || 0) - (r.rugi || 0), 0);
+
+        const firstReportPeriod = `${data[0].periode_laporan_nama} ${data[0].tahun_laporan}`;
+        const lastReportPeriod = `${latestReport.periode_laporan_nama} ${latestReport.tahun_laporan}`;
+
+        let performanceInsight = "";
+        if (labaRugiBersihFiltered > 0) {
+            performanceInsight = `Perusahaan mencatat **laba bersih sebesar ${formatRupiah(labaRugiBersihFiltered)}** dalam periode ini.`;
+        } else if (labaRugiBersihFiltered < 0) {
+            performanceInsight = `Perusahaan mencatat **rugi bersih sebesar ${formatRupiah(Math.abs(labaRugiBersihFiltered))}** dalam periode ini.`;
+        } else {
+            performanceInsight = "Perusahaan impas (break-even) dalam periode ini.";
+        }
+
+        // Trend analysis for Laba/Rugi
+        const quarterlyProfitLoss = {};
+        data.forEach(report => {
+            const period = `${report.periode_laporan_nama} ${report.tahun_laporan}`;
+            quarterlyProfitLoss[period] = (report.laba || 0) - (report.rugi || 0);
+        });
+
+        const sortedQuarterlyProfitLoss = Object.keys(quarterlyProfitLoss)
+            .map(key => ({ label: key, value: quarterlyProfitLoss[key], date: new Date(key.split(' ')[1], getQuarterStartMonth(key.split(' ')[0]) - 1) }))
+            .sort((a, b) => a.date - b.date);
+
+        let profitTrend = "";
+        if (sortedQuarterlyProfitLoss.length > 1) {
+            const lastPeriodProfit = sortedQuarterlyProfitLoss[sortedQuarterlyProfitLoss.length - 1].value;
+            const secondLastPeriodProfit = sortedQuarterlyProfitLoss[sortedQuarterlyProfitLoss.length - 2].value;
+
+            if (lastPeriodProfit > secondLastPeriodProfit) {
+                profitTrend = `Terlihat **peningkatan laba/penurunan rugi** pada triwulan terakhir dibandingkan triwulan sebelumnya.`;
+            } else if (lastPeriodProfit < secondLastPeriodProfit) {
+                profitTrend = `Terlihat **penurunan laba/peningkatan rugi** pada triwulan terakhir dibandingkan triwulan sebelumnya.`;
+            } else {
+                profitTrend = "Laba/rugi bersih cenderung stabil antar triwulan.";
+            }
+        }
+
+        summaryInsightText.innerHTML = `
+            Analisis laporan keuangan triwulanan dari **${firstReportPeriod}** hingga **${lastReportPeriod}** menunjukkan:
+            <br><br>
+            Total pendapatan yang dicatat adalah **${formatRupiah(totalPendapatanFiltered)}** dan total beban **${formatRupiah(totalBebanFiltered)}**.
+            ${performanceInsight}
+            <br><br>
+            ${profitTrend}
+            <br><br>
+            Pada laporan terakhir (**${lastReportPeriod}**):
+            <ul>
+                <li>Rasio Lancar: **${(latestReport.aset_lancar / (latestReport.hutang_jangka_pendek || 1)).toFixed(2)}x** (mengindikasikan kemampuan membayar kewajiban jangka pendek).</li>
+                <li>Rasio Utang terhadap Ekuitas: **${((latestReport.total_hutang || 0) / (latestReport.total_ekuitas || 1)).toFixed(2)}x** (mengindikasikan struktur modal dan risiko keuangan).</li>
+                <li>Marjin Laba: **${(((latestReport.laba || 0) - (latestReport.rugi || 0)) / (latestReport.total_pendapatan || 1) * 100).toFixed(2)}%** (mengindikasikan efisiensi operasional).</li>
+            </ul>
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="9" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan keuangan triwulanan yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["tahun_laporan"], getQuarterStartMonth(a["periode_laporan_nama"]) - 1);
+            const dateB = new Date(b["tahun_laporan"], getQuarterStartMonth(b["periode_laporan_nama"]) - 1);
+            return dateB - dateA; // Descending order (most recent first)
+        });
+
+        const currentSandiPjp = "{{ sandi_pjp }}";
+
+        sortedForTable.forEach(report => {
+            const labaRugiBersih = (report.laba || 0) - (report.rugi || 0);
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/keuangantriwulanan_report_detail/${report['tahun_laporan']}/${report['periode_laporan_nama']}`;
+
+            row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['sandi_pjp'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['nomor_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['tanggal_surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['periode_laporan_nama']}/${report['tahun_laporan']}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report['total_aset'] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report['total_hutang'] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report['total_ekuitas'] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(labaRugiBersih)}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            showCustomAlert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        const dataForExcel = currentFilteredReports.map(report => ({
+            'Sandi PJP': report['sandi_pjp'],
+            'Nama PJP': "{{ pjp_name }}",
+            'Tahun Laporan': report['tahun_laporan'],
+            'Periode Laporan': report['periode_laporan_nama'],
+            'Nomor Surat': report['nomor_surat'],
+            'Tanggal Surat': report['tanggal_surat'],
+            'Modal Dasar': report['modal_dasar'],
+            'Modal Disetor': report['modal_disetor'],
+            'Total Aset': report['total_aset'],
+            'Aset Lancar': report['aset_lancar'],
+            'Kas dan Setara Kas': report['kas_dan_setara_kas'],
+            'Aset Tetap': report['aset_tetap'],
+            'Total Hutang': report['total_hutang'],
+            'Hutang Jangka Pendek': report['hutang_jangka_pendek'],
+            'Hutang Jangka Panjang': report['hutang_jangka_panjang'],
+            'Total Ekuitas': report['total_ekuitas'],
+            'Total Pendapatan': report['total_pendapatan'],
+            'Pendapatan Fee': report['pendapatan_fee'],
+            'Total Beban': report['total_beban'],
+            'Beban Operasional': report['beban_operasional'],
+            'Laba': report['laba'],
+            'Rugi': report['rugi'],
+            'File URL': report['file_url'],
+            'Created At': report['created_at']
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Keuangan Triwulanan");
+
+        const fileName = `Laporan_Keuangan_Triwulanan_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Custom Alert/Modal Function
+    function showCustomAlert(message) {
+        let alertModal = document.getElementById('customAlertModal');
+        if (!alertModal) {
+            alertModal = document.createElement('div');
+            alertModal.id = 'customAlertModal';
+            alertModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden';
+            alertModal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <p id="customAlertMessage" class="text-gray-800 text-lg mb-4"></p>
+                    <button id="customAlertCloseBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg float-right">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                alertModal.classList.add('hidden');
+            });
+        }
+        document.getElementById('customAlertMessage').textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        populateYearDropdowns();
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            populateYearDropdowns();
+            document.getElementById('startQuarter').value = 'Q1';
+            document.getElementById('endQuarter').value = 'Q4';
+            document.getElementById('showInsightCheckbox').checked = false;
+            renderDashboard();
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            renderDashboard();
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+{% endblock %}

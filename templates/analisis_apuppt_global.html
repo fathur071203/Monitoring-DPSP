@@ -1,0 +1,902 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Laporan APU PPT Global{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="flex items-center justify-between mb-8">
+        <a href="{{ url_for('analisis_laporan') }}" class="flex items-center text-blue-600 hover:text-blue-800 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Daftar Laporan
+        </a>
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center flex-grow">Analisis Laporan APU PPT Global</h1>
+        <div><!-- Placeholder to balance the flex layout --></div>
+    </div>
+
+    <!-- KPI Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 justify-items-center"> {# Added justify-items-center #}
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total LTKT</h3>
+            <p id="totalLtktKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total LTKM</h3>
+            <p id="totalLtkmKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Total LTKL</h3>
+            <p id="totalLtklKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Persentase Kepatuhan SIPESAT</h3>
+            <p id="sipesatPercentageKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Rata-rata LTKT per Laporan</h3>
+            <p id="avgLtktKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-red-100 text-center">
+            <h3 class="text-lg font-semibold text-gray-600">Jumlah Laporan APU PPT</h3>
+            <p id="totalReportsKpi" class="text-3xl font-bold text-red-600 mt-2"></p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center justify-between">
+        <div class="flex flex-wrap items-center mb-4 sm:mb-0 space-y-2 sm:space-y-0 sm:space-x-4">
+            <label class="text-lg font-medium text-gray-700">Tahun Awal:</label>
+            <select id="startYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+
+            <label class="text-lg font-medium text-gray-700 ml-4">Tahun Akhir:</label>
+            <select id="endYearFilter" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                {# Years will be populated by JavaScript #}
+            </select>
+            <button id="applyFilterBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center ml-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-filter mr-2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filter
+            </button>
+        </div>
+        <button id="exportExcelBtn"
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mr-2">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 1 2 2h4"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/>
+            </svg>
+            Export ke Excel
+        </button>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren LTKT Tahunan</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlyLtktChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-blue-100" style="height: 350px;"> {# Fixed height for container #}
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tren Kepatuhan SIPESAT Tahunan</h3>
+            <div style="height: calc(100% - 40px);"> {# Adjusted height for canvas wrapper #}
+                <canvas id="yearlySipesatComplianceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top/Bottom Reports and PJPs Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md border border-purple-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 Laporan APU PPT (Jumlah LTKT)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topReportsLtktList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomReportsLtktList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 Laporan APU PPT (Kepatuhan SIPESAT)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbaik:</h4>
+                    <ul id="topReportsSipesatList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terburuk:</h4>
+                    <ul id="bottomReportsSipesatList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md border border-green-100">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top & Bottom 5 PJP (Jumlah LTKT)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbanyak:</h4>
+                    <ul id="topPJPsLtktList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terendah:</h4>
+                    <ul id="bottomPJPsLtktList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-4 text-center">Top & Bottom 5 PJP (Kepatuhan SIPESAT)</h3>
+            <div class="flex justify-around">
+                <div class="w-full pr-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terbaik:</h4>
+                    <ul id="topPJPsSipesatList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="w-full pl-2">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-2">Terburuk:</h4>
+                    <ul id="bottomPJPsSipesatList" class="list-disc list-inside text-left">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md"> {# Removed overflow-x-auto from here #}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">Daftar Laporan APU PPT</h2>
+            <div class="flex items-center">
+                <label for="rowsPerPage" class="text-sm font-medium text-gray-700 mr-2">Baris per halaman:</label>
+                <select id="rowsPerPage" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto"> {# Added overflow-x-auto here to wrap only the table #}
+            <table class="min-w-full divide-y divide-gray-200 w-max" id="apupptTable"> {# Changed ID #}
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="tahun_laporan">
+                            Tahun <span class="sort-icon" data-sort-for="tahun_laporan"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="nama_pjp">
+                            Nama PJP <span class="sort-icon" data-sort-for="nama_pjp"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sandi PJP
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nomor Surat
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_ltkt">
+                            Jumlah LTKT <span class="sort-icon" data-sort-for="jumlah_ltkt"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_ltkm">
+                            Jumlah LTKM <span class="sort-icon" data-sort-for="jumlah_ltkm"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_ltkl">
+                            Jumlah LTKL <span class="sort-icon" data-sort-for="jumlah_ltkl"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Lapor SIPESAT TW1
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Lapor SIPESAT TW2
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Lapor SIPESAT TW3
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Lapor SIPESAT TW4
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="sipesat_uploaded_count">
+                            Total Lapor SIPESAT <span class="sort-icon" data-sort-for="sipesat_uploaded_count"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_lapor_pemblokiran_dttot">
+                            Lapor Blokir DTTOT <span class="sort-icon" data-sort-for="jumlah_lapor_pemblokiran_dttot"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="expected_lapor_pemblokiran_dttot">
+                            Target Blokir DTTOT <span class="sort-icon" data-sort-for="expected_lapor_pemblokiran_dttot"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="jumlah_lapor_pemblokiran_dppspm">
+                            Lapor Blokir DPPSPM <span class="sort-icon" data-sort-for="jumlah_lapor_pemblokiran_dppspm"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="expected_lapor_pemblokiran_dppspm">
+                            Target Blokir DPPSPM <span class="sort-icon" data-sort-for="expected_lapor_pemblokiran_dppspm"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort-by="created_at">
+                            Tanggal Dibuat <span class="sort-icon" data-sort-for="created_at"></span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aksi
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="apupptTableBody"> {# Changed ID #}
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <nav class="flex items-center justify-between pt-4" aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500" id="paginationInfo"></span>
+            <ul class="inline-flex -space-x-px text-sm" id="paginationControls">
+                <!-- Pagination buttons will be populated by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data passed from Flask
+    const allAPUPPTReports = JSON.parse('{{ all_apuppt_reports | tojson | trim | safe }}');
+    const trendChartData = JSON.parse('{{ trend_chart_data | tojson | trim | safe }}');
+    const initialTopBottomData = JSON.parse('{{ initial_top_bottom_data | tojson | trim | safe }}');
+
+    console.log("allAPUPPTReports initialized:", allAPUPPTReports);
+    console.log("trendChartData initialized:", trendChartData);
+    console.log("initialTopBottomData initialized:", initialTopBottomData);
+
+
+    let currentFilteredReports = [...allAPUPPTReports]; // Initialize with all data
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+    let rowsPerPage = parseInt(document.getElementById('rowsPerPage').value); // Default rows per page
+    let currentPage = 1; // Current page number
+
+    // Chart.js instances
+    let yearlyLtktChartInstance;
+    let yearlySipesatComplianceChartInstance;
+
+    // Function to format currency (not directly used for APUPPT counts, but kept for consistency)
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari') or vice versa
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const quarterMonthMap = {
+        "Q1": "01", "Q2": "04", "Q3": "07", "Q4": "10"
+    };
+    
+    function getMonthName(monthInput) {
+        if (typeof monthInput === 'string') {
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                const index = parseInt(monthInput) - 1;
+                return monthNames[index] || monthInput;
+            } else if (monthNames.includes(monthInput)) {
+                return monthInput;
+            } else if (quarterMonthMap[monthInput]) {
+                return monthInput;
+            }
+        }
+        return monthInput;
+    }
+    
+    function getMonthNumber(monthInput) {
+        if (typeof monthInput === 'string') {
+            const index = monthNames.indexOf(monthInput);
+            if (index !== -1) {
+                return index + 1;
+            }
+            if (monthInput.length === 2 && !isNaN(parseInt(monthInput))) {
+                return parseInt(monthInput);
+            }
+            if (quarterMonthMap[monthInput]) {
+                return parseInt(quarterMonthMap[monthInput]);
+            }
+        }
+        return 0;
+    }
+
+    // Function to populate the table
+    function populateTable(reports) {
+        const tableBody = document.getElementById('apupptTableBody');
+        tableBody.innerHTML = ''; // Clear existing rows
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = rowsPerPage === 'all' ? reports.length : startIndex + rowsPerPage;
+        const paginatedReports = reports.slice(startIndex, endIndex);
+
+        if (paginatedReports.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">Tidak ada data laporan APU PPT untuk periode ini.</td></tr>`;
+            document.getElementById('paginationInfo').textContent = 'Menampilkan 0 dari 0 data';
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+
+        paginatedReports.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            const detailUrl = `/analisis_pjp/${report['sandi_pjp']}/apuppt_report_detail/${report['tahun_laporan']}`;
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["tahun_laporan"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["nama_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["sandi_pjp"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["nomor_surat"] || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_ltkt"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_ltkm"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_ltkl"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["lapor_sipesat_tw1"] ? 'Ya' : 'Tidak'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["lapor_sipesat_tw2"] ? 'Ya' : 'Tidak'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["lapor_sipesat_tw3"] ? 'Ya' : 'Tidak'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["lapor_sipesat_tw4"] ? 'Ya' : 'Tidak'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["sipesat_uploaded_count"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_lapor_pemblokiran_dttot"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["expected_lapor_pemblokiran_dttot"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["jumlah_lapor_pemblokiran_dppspm"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["expected_lapor_pemblokiran_dppspm"] || 0}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${report["created_at"]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        updateSortIcons();
+        renderPaginationControls(reports.length);
+    }
+
+    // Function to filter reports based on selected period range
+    function filterReports() {
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        console.log("Filter parameters:", { startYear, endYear });
+
+        if (!startYear || !endYear) { // Handle cases where years might not be populated yet
+            currentFilteredReports = [...allAPUPPTReports];
+            currentPage = 1; // Reset to first page
+            populateTable(currentFilteredReports);
+            updateVisualizations(currentFilteredReports);
+            updateKPIs(currentFilteredReports); // Update KPIs
+            console.log("No years selected, showing all reports.");
+            return;
+        }
+
+        const startYearInt = parseInt(startYear);
+        const endYearInt = parseInt(endYear);
+
+        currentFilteredReports = allAPUPPTReports.filter(report => {
+            const reportYear = report["tahun_laporan"];
+            return reportYear >= startYearInt && reportYear <= endYearInt;
+        });
+
+        console.log("Filtered Reports count:", currentFilteredReports.length);
+        console.log("Filtered Reports data (first 5):", currentFilteredReports.slice(0, 5));
+
+        currentPage = 1; // Reset to first page after filtering
+        // Re-apply current sorting after filtering
+        if (currentSortColumn) {
+            sortReports(currentSortColumn, currentSortDirection);
+        } else {
+            populateTable(currentFilteredReports);
+        }
+        updateVisualizations(currentFilteredReports);
+        updateKPIs(currentFilteredReports); // Update KPIs
+    }
+
+    // Function to populate year dropdowns
+    function populateYearFilters() {
+        const startYearFilter = document.getElementById('startYearFilter');
+        const endYearFilter = document.getElementById('endYearFilter');
+
+        // Clear existing options
+        startYearFilter.innerHTML = '';
+        endYearFilter.innerHTML = '';
+
+        const years = new Set();
+        allAPUPPTReports.forEach(report => {
+            years.add(report["tahun_laporan"]);
+        });
+
+        const sortedYears = Array.from(years).sort((a, b) => a - b);
+
+        console.log("Available years for filter:", sortedYears);
+
+        if (sortedYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            sortedYears.push(currentYear);
+            // Add a previous year if sensible, and if only current year is present
+            if (currentYear > 2000 && allAPUPPTReports.length === 0) {
+                sortedYears.unshift(currentYear - 1); 
+            }
+        }
+
+        sortedYears.forEach(year => {
+            const optionStart = document.createElement('option');
+            optionStart.value = year;
+            optionStart.textContent = year;
+            startYearFilter.appendChild(optionStart);
+
+            const optionEnd = document.createElement('option');
+            optionEnd.value = year;
+            optionEnd.textContent = year;
+            endYearFilter.appendChild(optionEnd);
+        });
+
+        // Set default selected years to cover all data or current year range
+        if (sortedYears.length > 0) {
+            startYearFilter.value = sortedYears[0];
+            endYearFilter.value = sortedYears[sortedYears.length - 1];
+        } else {
+            const currentYear = new Date().getFullYear();
+            startYearFilter.value = currentYear;
+            endYearFilter.value = currentYear;
+        }
+    }
+
+    // Function to sort reports
+    function sortReports(column, direction) {
+        console.log(`Sorting by ${column} in ${direction} order.`);
+
+        currentFilteredReports.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            // Special handling for 'created_at' to sort by date
+            if (column === "created_at") {
+                valA = new Date(valA);
+                valB = new Date(valB);
+            }
+            // Special handling for numeric fields
+            else if (['jumlah_ltkt', 'jumlah_ltkm', 'jumlah_ltkl', 'sipesat_uploaded_count', 'jumlah_lapor_pemblokiran_dttot', 'expected_lapor_pemblokiran_dttot', 'jumlah_lapor_pemblokiran_dppspm', 'expected_lapor_pemblokiran_dppspm'].includes(column)) {
+                valA = a[column] || 0;
+                valB = b[column] || 0;
+            }
+            // Handle boolean fields (lapor_sipesat_twX)
+            else if (['lapor_sipesat_tw1', 'lapor_sipesat_tw2', 'lapor_sipesat_tw3', 'lapor_sipesat_tw4'].includes(column)) {
+                valA = a[column] ? 1 : 0;
+                valB = b[column] ? 1 : 0;
+            }
+
+            if (valA < valB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+        populateTable(currentFilteredReports); // Re-populate table after sorting
+    }
+
+    // Function to update sort icons in table headers
+    function updateSortIcons() {
+        document.querySelectorAll('.sort-icon').forEach(icon => {
+            icon.innerHTML = ''; // Clear all icons
+        });
+
+        if (currentSortColumn) {
+            const activeIcon = document.querySelector(`.sort-icon[data-sort-for="${currentSortColumn}"]`);
+            if (activeIcon) {
+                activeIcon.innerHTML = currentSortDirection === 'asc' ? '&#9650;' : '&#9660;'; // Up or Down arrow
+            }
+        }
+    }
+
+    // Function to handle header clicks for sorting
+    document.querySelectorAll('th[data-sort-by]').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort-by');
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            sortReports(currentSortColumn, currentSortDirection);
+        });
+    });
+
+    // Function to export data to Excel (XLSX format)
+    async function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor.');
+            return;
+        }
+
+        const startYear = document.getElementById('startYearFilter').value;
+        const endYear = document.getElementById('endYearFilter').value;
+
+        // Construct query parameters for the Flask endpoint
+        const params = new URLSearchParams({
+            startYear: startYear,
+            endYear: endYear
+        });
+
+        console.log("Exporting to Excel with parameters:", params.toString());
+
+
+        try {
+            const response = await fetch(`/export_apuppt_xlsx?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            const fileName = `Laporan_APUPPT_Global_${startYear}_to_${endYear}.xlsx`;
+            
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            console.log("Excel export successful!");
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            alert('Terjadi kesalahan saat mengekspor data ke Excel.');
+        }
+    }
+
+    // --- Chart and Top/Bottom Analysis Functions ---
+
+    function updateVisualizations(reports) {
+        console.log("Updating visualizations with reports:", reports.length);
+
+        // Aggregate data for charts based on the filtered reports
+        const yearlyAggregated = {};
+
+        reports.forEach(report => {
+            const year = report["tahun_laporan"];
+            const jumlahLtkt = report["jumlah_ltkt"] || 0;
+            const sipesatUploadedCount = report["sipesat_uploaded_count"] || 0; // Already derived in Python
+            const reportCount = 1; // Each report is one data point for average
+
+
+            // Yearly aggregation
+            const yearKey = String(year);
+            if (!yearlyAggregated[yearKey]) {
+                yearlyAggregated[yearKey] = {
+                    total_ltkt: 0,
+                    sipesat_uploaded_count_sum: 0,
+                    report_count: 0,
+                    avg_sipesat_compliance: 0
+                };
+            }
+            yearlyAggregated[yearKey].total_ltkt += jumlahLtkt;
+            yearlyAggregated[yearKey].sipesat_uploaded_count_sum += sipesatUploadedCount;
+            yearlyAggregated[yearKey].report_count += reportCount;
+            yearlyAggregated[yearKey].avg_sipesat_compliance = (yearlyAggregated[yearKey].report_count * 4) > 0
+                ? (yearlyAggregated[yearKey].sipesat_uploaded_count_sum / (yearlyAggregated[yearKey].report_count * 4) * 100)
+                : 0;
+
+        });
+
+        console.log("Yearly aggregated data:", yearlyAggregated);
+
+
+        // Prepare data for Yearly Charts
+        const sortedYearlyKeys = Object.keys(yearlyAggregated).sort((a, b) => parseInt(a) - parseInt(b));
+        const yearlyLabels = sortedYearlyKeys;
+        const yearlyTotalLtkt = sortedYearlyKeys.map(k => yearlyAggregated[k].total_ltkt);
+        const yearlyAvgSipesatCompliance = sortedYearlyKeys.map(k => yearlyAggregated[k].avg_sipesat_compliance);
+
+
+        // Render Yearly LTKT Chart
+        if (yearlyLtktChartInstance) {
+            yearlyLtktChartInstance.destroy();
+            yearlyLtktChartInstance = null;
+        }
+        const yearlyLtktCtx = document.getElementById('yearlyLtktChart').getContext('2d');
+        yearlyLtktCtx.canvas.height = 300;
+        yearlyLtktCtx.canvas.width = yearlyLtktCtx.canvas.parentNode.offsetWidth;
+        yearlyLtktChartInstance = new Chart(yearlyLtktCtx, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [{
+                    label: 'Jumlah LTKT Tahunan',
+                    data: yearlyTotalLtkt,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)', // Blue
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Jumlah LTKT' } },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+
+        // Render Yearly SIPESAT Compliance Chart
+        if (yearlySipesatComplianceChartInstance) {
+            yearlySipesatComplianceChartInstance.destroy();
+            yearlySipesatComplianceChartInstance = null;
+        }
+        const yearlySipesatComplianceCtx = document.getElementById('yearlySipesatComplianceChart').getContext('2d');
+        yearlySipesatComplianceCtx.canvas.height = 300;
+        yearlySipesatComplianceCtx.canvas.width = yearlySipesatComplianceCtx.canvas.parentNode.offsetWidth;
+        yearlySipesatComplianceChartInstance = new Chart(yearlySipesatComplianceCtx, {
+            type: 'line',
+            data: {
+                labels: yearlyLabels,
+                datasets: [{
+                    label: 'Kepatuhan SIPESAT Tahunan (%)',
+                    data: yearlyAvgSipesatCompliance,
+                    borderColor: 'rgba(239, 68, 68, 1)', // Red
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    fill: false, tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Persentase (%)' }, max: 100 },
+                    x: { title: { display: true, text: 'Tahun' } }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: function(context) { return `${context.dataset.label}: ${context.raw.toFixed(2)}%`; } } }
+                }
+            }
+        });
+
+
+        // Update Top/Bottom Reports and PJPs
+        const topBottomData = getTopBottomAnalysis(reports);
+        console.log("Top/Bottom Analysis Data:", topBottomData);
+
+        // Laporan APU PPT (individual reports)
+        displayTopBottomLists('topReportsLtktList', topBottomData.top_5_reports_by_ltkt, 'jumlah_ltkt', 'report', 'jumlah');
+        displayTopBottomLists('bottomReportsLtktList', topBottomData.bottom_5_reports_by_ltkt, 'jumlah_ltkt', 'report', 'jumlah');
+        displayTopBottomLists('topReportsSipesatList', topBottomData.top_5_reports_by_sipesat_compliance, 'sipesat_uploaded_count', 'report', 'sipesat_compliance');
+        displayTopBottomLists('bottomReportsSipesatList', topBottomData.bottom_5_reports_by_sipesat_compliance, 'sipesat_uploaded_count', 'report', 'sipesat_compliance');
+        
+        // PJP (aggregated)
+        displayTopBottomLists('topPJPsLtktList', topBottomData.top_5_pjps_by_ltkt, 'total_ltkt', 'aggregated', 'jumlah');
+        displayTopBottomLists('bottomPJPsLtktList', topBottomData.bottom_5_pjps_by_ltkt, 'total_ltkt', 'aggregated', 'jumlah');
+        displayTopBottomLists('topPJPsSipesatList', topBottomData.top_5_pjps_by_sipesat_compliance, 'avg_sipesat_compliance', 'aggregated', 'sipesat_compliance');
+        displayTopBottomLists('bottomPJPsSipesatList', topBottomData.bottom_5_pjps_by_sipesat_compliance, 'avg_sipesat_compliance', 'aggregated', 'sipesat_compliance');
+    }
+
+    // Helper function for Top/Bottom Analysis
+    function getTopBottomAnalysis(reports) {
+        const pjpAggregated = {};        // { "PJP_Name": { "total_ltkt": N, "sipesat_uploaded_count_sum": M, "report_count": R } }
+
+        reports.forEach(report => {
+            const pjpName = report["nama_pjp"] || "Tidak Diketahui";
+            const jumlahLtkt = report["jumlah_ltkt"] || 0;
+            const sipesatUploadedCount = report["sipesat_uploaded_count"] || 0;
+
+            // Aggregate by PJP
+            if (!pjpAggregated[pjpName]) {
+                pjpAggregated[pjpName] = {
+                    "total_ltkt": 0,
+                    "sipesat_uploaded_count_sum": 0,
+                    "report_count": 0,
+                    "avg_sipesat_compliance": 0
+                };
+            }
+            pjpAggregated[pjpName].total_ltkt += jumlahLtkt;
+            pjpAggregated[pjpName].sipesat_uploaded_count_sum += sipesatUploadedCount;
+            pjpAggregated[pjpName].report_count += 1;
+            pjpAggregated[pjpName].avg_sipesat_compliance = (pjpAggregated[pjpName].report_count * 4) > 0
+                ? (pjpAggregated[pjpName].sipesat_uploaded_count_sum / (pjpAggregated[pjpName].report_count * 4) * 100)
+                : 0;
+
+        });
+
+        // Convert to list of (name, data_dict) tuples for PJPs
+        const pjpsList = Object.entries(pjpAggregated);
+
+        // Sort and slice for top/bottom 5 for PJPs by total LTKT
+        const top5PJPsByLtkt = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.total_ltkt - dataA.total_ltkt).slice(0, 5);
+        const bottom5PJPsByLtkt = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.total_ltkt - dataB.total_ltkt).slice(0, 5);
+
+        // Sort and slice for top/bottom 5 for PJPs by average Sipesat compliance (highest is best)
+        const top5PJPsBySipesatCompliance = [...pjpsList].sort(([, dataA], [, dataB]) => dataB.avg_sipesat_compliance - dataA.avg_sipesat_compliance).slice(0, 5);
+        const bottom5PJPsBySipesatCompliance = [...pjpsList].sort(([, dataA], [, dataB]) => dataA.avg_sipesat_compliance - dataB.avg_sipesat_compliance).slice(0, 5);
+
+
+        // --- Top/Bottom Individual Reports ---
+        // Make copies to sort without affecting the original filteredReports
+        const reportsByLtkt = [...reports];
+        const reportsBySipesatCompliance = [...reports];
+
+        // Sort by jumlah_ltkt
+        const top5ReportsByLtkt = reportsByLtkt.sort((a, b) => b["jumlah_ltkt"] - a["jumlah_ltkt"]).slice(0, 5);
+        const bottom5ReportsByLtkt = reportsByLtkt.sort((a, b) => a["jumlah_ltkt"] - b["jumlah_ltkt"]).slice(0, 5);
+
+        // Sort by sipesat_uploaded_count (highest is best)
+        const top5ReportsBySipesatCompliance = reportsBySipesatCompliance.sort((a, b) => (b["sipesat_uploaded_count"] || 0) - (a["sipesat_uploaded_count"] || 0)).slice(0, 5);
+        const bottom5ReportsBySipesatCompliance = reportsBySipesatCompliance.sort((a, b) => (a["sipesat_uploaded_count"] || 0) - (b["sipesat_uploaded_count"] || 0)).slice(0, 5);
+
+        return {
+            top_5_reports_by_ltkt: top5ReportsByLtkt,
+            bottom_5_reports_by_ltkt: bottom5ReportsByLtkt,
+            top_5_reports_by_sipesat_compliance: top5ReportsBySipesatCompliance,
+            bottom_5_reports_by_sipesat_compliance: bottom5ReportsBySipesatCompliance,
+            top_5_pjps_by_ltkt: top5PJPsByLtkt,
+            bottom_5_pjps_by_ltkt: bottom5PJPsByLtkt,
+            top_5_pjps_by_sipesat_compliance: top5PJPsBySipesatCompliance,
+            bottom_5_pjps_by_sipesat_compliance: bottom5PJPsBySipesatCompliance,
+        };
+    }
+
+    // Helper function to display top/bottom lists
+    function displayTopBottomLists(elementId, data, valueKey, dataType, valueType) { // valueType: 'jumlah' or 'nominal' or 'sipesat_compliance'
+        const listElement = document.getElementById(elementId);
+        listElement.innerHTML = '';
+        if (data.length === 0) {
+            listElement.innerHTML = '<li>Tidak ada data.</li>';
+            return;
+        }
+        data.forEach(item => {
+            const listItem = document.createElement('li');
+            let name;
+            let displayValue;
+
+            if (dataType === 'report') {
+                // Item is a full report object
+                name = `${item["nama_pjp"]} (${item["tahun_laporan"]})`; // For annual reports, just year
+                displayValue = item[valueKey];
+            } else if (dataType === 'aggregated') {
+                // Item is an array [name, data_object] from Object.entries
+                name = item[0];
+                displayValue = item[1][valueKey];
+            }
+
+            // Ensure displayValue is a number before applying toFixed or other numeric formatting
+            if (typeof displayValue !== 'number') {
+                displayValue = parseFloat(displayValue) || 0; // Attempt to parse, default to 0 if not a valid number
+            }
+
+            if (valueType === 'nominal') {
+                displayValue = formatCurrency(displayValue);
+            } else if (valueType === 'sipesat_compliance') {
+                displayValue = `${displayValue.toFixed(2)}%`;
+            } else {
+                displayValue = `${displayValue} laporan`; // Default for counts
+            }
+            
+            listItem.textContent = `${name}: ${displayValue}`;
+            listElement.appendChild(listItem);
+        });
+    }
+
+    // Function to update KPI cards
+    function updateKPIs(reports) {
+        const totalLtkt = reports.reduce((sum, report) => sum + (report["jumlah_ltkt"] || 0), 0);
+        const totalLtkm = reports.reduce((sum, report) => sum + (report["jumlah_ltkm"] || 0), 0);
+        const totalLtkl = reports.reduce((sum, report) => sum + (report["jumlah_ltkl"] || 0), 0);
+        const totalReports = reports.length;
+
+        const totalSipesatUploadedCount = reports.reduce((sum, report) => sum + (report["sipesat_uploaded_count"] || 0), 0);
+        const totalSipesatExpectedCount = totalReports * 4; // Assuming 4 quarters per report
+        const sipesatPercentage = totalSipesatExpectedCount > 0 ? (totalSipesatUploadedCount / totalSipesatExpectedCount * 100) : 0;
+        
+        const avgLtktPerReport = totalReports > 0 ? totalLtkt / totalReports : 0;
+
+
+        document.getElementById('totalLtktKpi').textContent = totalLtkt.toLocaleString('id-ID');
+        document.getElementById('totalLtkmKpi').textContent = totalLtkm.toLocaleString('id-ID');
+        document.getElementById('totalLtklKpi').textContent = totalLtkl.toLocaleString('id-ID');
+        document.getElementById('sipesatPercentageKpi').textContent = sipesatPercentage.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+        document.getElementById('avgLtktKpi').textContent = avgLtktPerReport.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('totalReportsKpi').textContent = totalReports.toLocaleString('id-ID');
+    }
+
+    // --- Pagination Functions ---
+    function renderPaginationControls(totalReports) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = ''; // Clear existing controls
+
+        const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(totalReports / rowsPerPage);
+        const paginationInfo = document.getElementById('paginationInfo');
+
+        if (totalReports === 0) {
+            paginationInfo.textContent = 'Menampilkan 0 dari 0 data';
+            return;
+        }
+
+        const startEntry = (currentPage - 1) * rowsPerPage + 1;
+        const endEntry = rowsPerPage === 'all' ? totalReports : Math.min(currentPage * rowsPerPage, totalReports);
+        paginationInfo.textContent = `Menampilkan ${startEntry}-${endEntry} dari ${totalReports} data`;
+
+        if (totalPages <= 1) {
+            return; // No need for pagination if only one page
+        }
+
+        // Previous button
+        const prevButton = document.createElement('li');
+        prevButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}">Previous</a>`;
+        prevButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(prevButton);
+
+        // Page numbers
+        const maxPageButtons = 5; // Max number of page buttons to show
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('li');
+            pageButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 ${i === currentPage ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700' : ''}">${i}</a>`;
+            pageButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentPage = i;
+                populateTable(currentFilteredReports);
+            });
+            paginationControls.appendChild(pageButton);
+        }
+
+        // Next button
+        const nextButton = document.createElement('li');
+        nextButton.innerHTML = `<a href="#" class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}">Next</a>`;
+        nextButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                populateTable(currentFilteredReports);
+            }
+        });
+        paginationControls.appendChild(nextButton);
+    }
+
+
+    // Event listener for rows per page change
+    document.getElementById('rowsPerPage').addEventListener('change', function() {
+        rowsPerPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1; // Reset to first page when rows per page changes
+        populateTable(currentFilteredReports);
+    });
+
+    // Add event listener for export button
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+    // Add event listener for the new Filter button
+    document.getElementById('applyFilterBtn').addEventListener('click', filterReports);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        populateYearFilters(); // Populate years first
+        filterReports();      // Apply initial filter (which also populates the table and visualizations)
+    });
+</script>
+
+{% endblock %}

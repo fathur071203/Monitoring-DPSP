@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan Manajemen - {{ pjp_name }} ({{ report_data.get('tahun_laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard Laporan Manajemen -->
+    <div class="mb-6">
+        <a href="{{ url_for('manajemen_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard Laporan Manajemen
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Manajemen & Hasil Pengawasan Dewan Komisaris</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Tahun Laporan: {{ report_data.get('tahun_laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Signatories -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Umum Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report_data.get('nomor_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data.get('tanggal_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Created At:</span> {{ report_data.get('created_at', 'N/A') }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Persentase Kepemilikan Domestik:</span> {{ "{:,.2f}%".format(report_data.get('persentase_kepemilikan_domestik', 0)) }}</p>
+                        <p><span class="font-semibold">Pengendalian Domestik:</span> {{ "{:,.0f}".format(report_data.get('pengendalian_domestik', 0)) }}</p>
+                        <p><span class="font-semibold">Persentase Kepemilikan Asing:</span> {{ "{:,.2f}%".format(report_data.get('persentase_kepemilikan_asing', 0)) }}</p>
+                        <p><span class="font-semibold">Pengendalian Asing:</span> {{ "{:,.0f}".format(report_data.get('pengendalian_asing', 0)) }}</p>
+                        <p><span class="font-semibold">Pihak Pengendali UBO:</span> {{ report_data.get('pihak_pengendali_ubo', 'N/A') }}</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <p><span class="font-semibold">Keterangan Tambahan:</span> {{ report_data.get('keterangan', 'Tidak ada keterangan.') }}</p>
+                </div>
+            </div>
+
+            <!-- Bagian Pejabat yang Bertandatangan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Pejabat yang Bertandatangan</h4>
+                {% if report_data.get('manajemen_sign') %}
+                    <ul class="list-disc list-inside text-gray-700">
+                        {% for sign in report_data.manajemen_sign %}
+                            <li><span class="font-semibold">{{ sign.nama }}</span> ({{ sign.jabatan }} - {{ sign.klasifikasi }})</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-600">Tidak ada informasi pejabat yang bertandatangan.</p>
+                {% endif %}
+            </div>
+
+            <!-- Bagian Ringkasan Laporan Manajemen (Executive Summary) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Ringkasan Laporan Manajemen</h4>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left">No.</th>
+                                <th class="py-3 px-6 text-left">Sub Laporan</th>
+                                <th class="py-3 px-6 text-center">Tersedia</th>
+                                <th class="py-3 px-6 text-left">Executive Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-700 text-sm">
+                            {% set summary_points = [
+                                {"name": "Penilaian Perkembangan Industri SP", "id_prefix": "penilaian_perkembangan_industri_sp"},
+                                {"name": "Pengawasan Perkembangan Bisnis PJP", "id_prefix": "pengawasan_perkembangan_bisnis_pjp"},
+                                {"name": "Pengawasan Tata Kelola PJP", "id_prefix": "pengawasan_tata_kelola_pjp"},
+                                {"name": "Pandangan Perbaikan PJP", "id_prefix": "pandangan_perbaikan_pjp"},
+                                {"name": "Perubahan Komposisi Komisaris", "id_prefix": "perubahan_komposisi_komisaris"},
+                                {"name": "Implementasi Kebijakan Direksi", "id_prefix": "implementasi_kebijakan_direksi"},
+                                {"name": "Proses Pencapaian Kinerja", "id_prefix": "proses_pencapaian_kinerja"},
+                                {"name": "Perbandingan Target dan Realisasi", "id_prefix": "perbandingan_target_dan_realisasi"},
+                                {"name": "Kendala yang Dihadapi PJP", "id_prefix": "kendala_yang_dihadapi_pjp"},
+                                {"name": "Tata Kelola Pengawasan Direksi Komisaris", "id_prefix": "tata_kelola_pengawasan_direksi_komisaris"},
+                                {"name": "Tata Kelola Risiko SDM", "id_prefix": "tata_kelola_risiko_sdm"},
+                                {"name": "Tata Kelola Ketersediaan Prosedur", "id_prefix": "tata_kelola_ketersediaan_prosedur"},
+                                {"name": "Tata Kelola Pengendalian Intern", "id_prefix": "tata_kelola_pengendalian_intern"},
+                                {"name": "Asesmen Kualitatif SDM", "id_prefix": "asesmen_kualitatif_sdm"},
+                                {"name": "Asesmen Kuantitatif SDM", "id_prefix": "asesmen_kuantitatif_sdm"},
+                                {"name": "Asesmen Kepemilikan Domestik Asing", "id_prefix": "asesmen_kepemilikan_domestik_asing"},
+                                {"name": "Asesmen Pengendalian Domestik Asing", "id_prefix": "asesmen_pengendalian_domestik_asing"},
+                                {"name": "Asesmen Pemenuhan Modal", "id_prefix": "asesmen_pemenuhan_modal"},
+                                {"name": "Asesmen Manajemen Risiko IT", "id_prefix": "asesmen_manajemen_risiko_it"},
+                                {"name": "Pemantauan Kepatuhan", "id_prefix": "pemantauan_kepatuhan"}
+                            ] %}
+                            {% for point in summary_points %}
+                            <tr>
+                                <td class="py-3 px-6 text-left">{{ loop.index }}</td>
+                                <td class="py-3 px-6 text-left">{{ point.name }}</td>
+                                <td class="py-3 px-6 text-center">
+                                    {{ 'Ya' if report_data.get(point.id_prefix + '_status') else 'Tidak' }}
+                                </td>
+                                <td class="py-3 px-6 text-left">
+                                    {{ report_data.get(point.id_prefix, 'N/A') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Visualizations and PDF Viewer -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Perbandingan dengan Tahun Sebelumnya -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan Kepemilikan & Pengendalian dengan Tahun Sebelumnya</h4>
+                <div class="w-full h-64">
+                    <canvas id="previousYearComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Tren 5 Tahun -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren 5 Tahun Kepemilikan & Pengendalian</h4>
+                <div class="w-full h-64">
+                    <canvas id="fiveYearTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bagian Dokumen Laporan (PDF Viewer) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report_data.get('file_url') and report_data.get('file_url') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden">
+                        <iframe src="{{ report_data.get('file_url') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report_data.get('file_url') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Script tags for robust JSON passing #}
+<script type="application/json" id="report-data">
+    {{ report_data | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-previous-year-data">
+    {{ comparison_data_previous_year | tojson | safe }}
+</script>
+<script type="application/json" id="trend-data-5-years">
+    {{ trend_data_5_years | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        let report;
+        let comparisonDataPreviousYear;
+        let trendData5Years;
+
+        try {
+            report = JSON.parse(document.getElementById('report-data').textContent.trim());
+            console.log("Parsed report data:", report);
+        } catch (e) {
+            console.error("Error parsing report JSON:", e);
+            report = {};
+        }
+
+        try {
+            const rawPrevYearData = document.getElementById('comparison-previous-year-data').textContent.trim();
+            comparisonDataPreviousYear = rawPrevYearData ? JSON.parse(rawPrevYearData) : null;
+            console.log("Parsed comparisonDataPreviousYear:", comparisonDataPreviousYear);
+        } catch (e) {
+            console.error("Error parsing comparisonDataPreviousYear JSON:", e);
+            comparisonDataPreviousYear = null;
+        }
+
+        try {
+            const rawTrendData = document.getElementById('trend-data-5-years').textContent.trim();
+            trendData5Years = rawTrendData ? JSON.parse(rawTrendData) : [];
+            console.log("Parsed trendData5Years:", trendData5Years);
+        } catch (e) {
+            console.error("Error parsing trendData5Years JSON:", e);
+            trendData5Years = [];
+        }
+
+        // Helper to format numbers
+        function formatNumber(amount) {
+            return new Intl.NumberFormat('id-ID').format(amount);
+        }
+
+        // --- Grafik Batang: Perbandingan Kepemilikan & Pengendalian dengan Tahun Sebelumnya ---
+        const labelsComparison = ["Kepemilikan Domestik (%)", "Kepemilikan Asing (%)", "Pengendalian Domestik", "Pengendalian Asing"];
+        const dataCurrentYear = [
+            report.persentase_kepemilikan_domestik || 0,
+            report.persentase_kepemilikan_asing || 0,
+            report.pengendalian_domestik || 0,
+            report.pengendalian_asing || 0
+        ];
+
+        const dataPreviousYear = [];
+        if (comparisonDataPreviousYear) {
+            dataPreviousYear.push(
+                comparisonDataPreviousYear.persentase_kepemilikan_domestik || 0,
+                comparisonDataPreviousYear.persentase_kepemilikan_asing || 0,
+                comparisonDataPreviousYear.pengendalian_domestik || 0,
+                comparisonDataPreviousYear.pengendalian_asing || 0
+            );
+        } else {
+            dataPreviousYear.push(0, 0, 0, 0); // No previous year data
+        }
+
+        const ctxPrevYear = document.getElementById('previousYearComparisonChart').getContext('2d');
+        new Chart(ctxPrevYear, {
+            type: 'bar',
+            data: {
+                labels: labelsComparison,
+                datasets: [
+                    {
+                        label: `Tahun Ini (${report.tahun_laporan})`,
+                        data: dataCurrentYear,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: `Tahun Sebelumnya (${comparisonDataPreviousYear ? comparisonDataPreviousYear.tahun_laporan : 'N/A'})`, 
+                        data: dataPreviousYear,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => {
+                        if (context.dataIndex === 0 || context.dataIndex === 1) {
+                            return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                        }
+                        return `${context.dataset.label}: ${formatNumber(context.raw)}`;
+                    }} }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Jenis Data' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Nilai' },
+                        ticks: { callback: function(value, index, values) {
+                            if (index === 0 || index === 1) { // For percentage values
+                                return value + '%';
+                            }
+                            return formatNumber(value);
+                        }}
+                    }
+                }
+            }
+        });
+
+        // --- Grafik Garis: Tren 5 Tahun Kepemilikan & Pengendalian ---
+        const trendLabels = trendData5Years.map(report => report.tahun_laporan);
+        const trendDomestikOwnership = trendData5Years.map(report => report.persentase_kepemilikan_domestik || 0);
+        const trendAsingOwnership = trendData5Years.map(report => report.persentase_kepemilikan_asing || 0);
+        const trendDomestikControl = trendData5Years.map(report => report.pengendalian_domestik || 0);
+        const trendAsingControl = trendData5Years.map(report => report.pengendalian_asing || 0);
+
+
+        const ctxFiveYearTrend = document.getElementById('fiveYearTrendChart').getContext('2d');
+        new Chart(ctxFiveYearTrend, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    { label: 'Kepemilikan Domestik (%)', data: trendDomestikOwnership, borderColor: 'rgb(75, 192, 192)', fill: false, tension: 0.1 },
+                    { label: 'Kepemilikan Asing (%)', data: trendAsingOwnership, borderColor: 'rgb(255, 159, 64)', fill: false, tension: 0.1 },
+                    { label: 'Pengendalian Domestik', data: trendDomestikControl, borderColor: 'rgb(153, 102, 255)', fill: false, tension: 0.1, yAxisID: 'y1' },
+                    { label: 'Pengendalian Asing', data: trendAsingControl, borderColor: 'rgb(201, 203, 207)', fill: false, tension: 0.1, yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: (context) => {
+                        if (context.dataset.label.includes('%')) {
+                            return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                        }
+                        return `${context.dataset.label}: ${formatNumber(context.raw)}`;
+                    }} }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Persentase Kepemilikan (%)' },
+                        ticks: { callback: function(value) { return value + '%'; } }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Pengendalian' },
+                        grid: {
+                            drawOnChartArea: false, // only want the grid lines for one axis to show
+                        },
+                        ticks: { callback: function(value) { return formatNumber(value); } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

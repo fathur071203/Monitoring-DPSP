@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail PJP - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Daftar PJP dipindahkan ke sini -->
+    <div class="mb-6">
+        <a href="{{ url_for('analisis_pjp') }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Daftar PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Analisis untuk {{ pjp_name }}</h1>
+    <p class="text-xl text-gray-700 mb-8 text-center">Sandi PJP: <span class="font-semibold">{{ sandi_pjp }}</span></p>
+
+    <!-- Bagian Profil PJP -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Profil PJP</h2>
+        <div class="grid grid-cols-1 md:tw-grid-cols-2 tw-gap-6 tw-text-gray-700"> {# Changed to 2-column grid for better layout #}
+            <div class="flex items-center space-x-3">
+                <!-- Icon for Sandi PJP -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-tag text-blue-500"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414L14.586 22.414a2 2 0 0 0 2.828 0l7.172-7.172a2 2 0 0 0 0-2.828Z"/><path d="M7 7h.01"/></svg>
+                <p><span class="font-semibold">Sandi PJP:</span> {{ pjp_info.sandi }}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <!-- Icon for Nama PJP -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building text-blue-500"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9.5 16h5"/><path d="M9.5 12h5"/><path d="M9.5 8h5"/></svg>
+                <p><span class="font-semibold">Nama PJP:</span> {{ pjp_info.nama }}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <!-- Icon for Nomor Keputusan -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text text-blue-500"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                <p><span class="font-semibold">Nomor Keputusan:</span> {{ pjp_info.nomor_keputusan | default('Tidak Tersedia') }}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <!-- Icon for Email PIC -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail text-blue-500"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <p><span class="font-semibold">Email PIC:</span> {{ pjp_info.email_pic | default('Tidak Tersedia') }}</p>
+            </div>
+            <div class="flex items-start space-x-3"> {# Use items-start for multi-line address #}
+                <!-- Icon for Alamat -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin text-blue-500 mt-1"><path d="M12 18.3a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6Z"/><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8Z"/></svg>
+                <p><span class="font-semibold">Alamat:</span> {{ pjp_info.alamat | default('Tidak Tersedia') }}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <!-- Icon for Website -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe text-blue-500"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                <p><span class="font-semibold">Website:</span> <a href="{{ pjp_info.website | default('#') }}" target="_blank" class="text-blue-500 hover:underline">{{ pjp_info.website | default('Tidak Tersedia') }}</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bagian Laporan -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan</h2>
+
+        {% set reports_categorized = {
+            "Insidental": [
+                {"name": "Laporan Gangguan IT", "type": "gangguan_it"}
+            ],
+            "Bulanan": [
+                {"name": "Laporan Fraud", "type": "fraud"},
+                {"name": "Laporan Transaksi Dana Bukan Bank (LTDBB)", "type": "ltdbb"},
+                {"name": "Laporan Kerjasama P2P", "type": "kerjasama_p2p"},
+                {"name": "Laporan DTTOT", "type": "dttot"}
+            ],
+
+            "Triwulanan": [
+                {"name": "Laporan Keuangan Triwulan", "type": "keuangan_triwulan"}
+            ],
+            "Tahunan": [
+                {"name": "Laporan Keuangan Tahunan", "type": "keuangan_tahunan"},
+                {"name": "Laporan Pelaksanaan Pengujian Keamanan", "type": "pentest"},
+                {"name": "Laporan Audit Sistem Informasi", "type": "auditsi"},
+                {"name": "Laporan APU PPT", "type": "apu_ppt"},
+                {"name": "Laporan Manajemen & Hasil Pengawasan Dewan Komisaris", "type": "manajemen_dewan"},
+                {"name": "Laporan Perhitungan KPSP", "type": "kpsp"},
+                {"name": "Laporan Tahunan Sistem Pembayaran", "type": "sistem_pembayaran_tahunan"},
+                {"name": "Laporan RBA APU PPT", "type": "rba_apu_ppt"}
+            ]
+        } %}
+
+        {% for category, report_list in reports_categorized.items() %}
+            <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3 border-b-2 pb-1">{{ category }}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                {% for report in report_list %}
+                    {% set report_url = '#' %}
+                    {% if report.type == 'sksp_triwulan' %}
+                        {% set report_url = url_for('show_sksp_triwulan_detail', sandi=sandi_pjp, tahun=2025, periode='TW1') %}
+                    {% elif report.type == 'fraud' %}
+                        {% set report_url = url_for('fraud_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'ltdbb' %}
+                        {% set report_url = url_for('ltdbb_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'kerjasama_p2p' %}
+                        {% set report_url = url_for('kerjasamap2p_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'dttot' %}
+                        {% set report_url = url_for('dttot_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'gangguan_it' %}
+                        {% set report_url = url_for('gangguanit_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'keuangan_triwulan' %}
+                        {% set report_url = url_for('keuangantriwulanan_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'keuangan_tahunan' %}
+                        {% set report_url = url_for('keuangantahunan_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'pentest' %} 
+                        {% set report_url = url_for('pentest_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'auditsi' %} 
+                        {% set report_url = url_for('auditsi_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'apu_ppt' %}
+                        {% set report_url = url_for('apuppt_report', sandi=sandi_pjp) %}
+                    {% elif report.type == 'manajemen_dewan' %}
+                        {% set report_url = url_for('manajemen_report', sandi=sandi_pjp) %}
+                    {% else %}
+                        {% set report_url = '#' %}
+                    {% endif %}
+
+                    <a href="{{ report_url }}"
+                       class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-5 rounded-lg
+                              shadow-md hover:shadow-lg transition duration-300 ease-in-out text-center">
+                        {{ report.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

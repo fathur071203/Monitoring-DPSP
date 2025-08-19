@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan SKSP Triwulan - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Laporan SKSP Triwulan</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }}) - {{ periode_laporan }} {{ tahun_laporan }}</h2>
+
+    <!-- Bagian Detail Laporan -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Detail Laporan</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div>
+                <p><span class="font-semibold">Nomor Surat:</span> {{ report_data["Nomor Surat"] }}</p>
+                <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data["Tanggal Surat"] }}</p>
+                <p><span class="font-semibold">Sub Bidang SKKNI:</span> {{ report_data["Sub Bidang SKKNI"] }}</p>
+                <p><span class="font-semibold">Total Pegawai PBK Lv4:</span> {{ report_data["Total Pegawai PBK Lv4"] }}</p>
+                <p><span class="font-semibold">Total Pegawai PBK Lv5:</span> {{ report_data["Total Pegawai PBK Lv5"] }}</p>
+                <p><span class="font-semibold">Total Pegawai PBK Lv6:</span> {{ report_data["Total Pegawai PBK Lv6"] }}</p>
+                <p><span class="font-semibold">Total Pegawai SK Lv Direksi:</span> {{ report_data["Total Pegawai SK Lv Direksi"] }}</p>
+            </div>
+            <div>
+                <p><span class="font-semibold">Rencana PBK Pelaksana (Lv4) TW Ini:</span> {{ report_data["Rencana PBK Pelaksana Tw"] }}</p>
+                <p><span class="font-semibold">Realisasi PBK Pelaksana (Lv4) TW Ini:</span> {{ report_data["Realisasi PBK Pelaksana Tw"] }}</p>
+                <p><span class="font-semibold">Rencana PBK Penyelia (Lv5) TW Ini:</span> {{ report_data["Rencana PBK Penyelia Tw"] }}</p>
+                <p><span class="font-semibold">Realisasi PBK Penyelia (Lv5) TW Ini:</span> {{ report_data["Realisasi PBK Penyelia Tw"] }}</p>
+                <p><span class="font-semibold">Rencana PBK Pejabat Eksekutif (Lv6) TW Ini:</span> {{ report_data["Rencana PBK Pejabat Eksekutif Tw"] }}</p>
+                <p><span class="font-semibold">Realisasi PBK Pejabat Eksekutif (Lv6) TW Ini:</span> {{ report_data["Realisasi PBK Pejabat Eksekutif Tw"] }}</p>
+                <p><span class="font-semibold">Rencana SK Pejabat Direksi TW Ini:</span> {{ report_data["Rencana SK Pejabat Direksi Tw"] }}</p>
+                <p><span class="font-semibold">Realisasi SK Pejabat Direksi TW Ini:</span> {{ report_data["Realisasi SK Pejabat Direksi Tw"] }}</p>
+                <p><span class="font-semibold">Akumulasi SK Pejabat:</span> {{ report_data["Akumulasi SK Pejabat"] }}</p>
+                <p><span class="font-semibold">Keterangan:</span> {{ report_data["Keterangan"] }}</p>
+                <p><span class="font-semibold">Link File:</span> <a href="{{ report_data['File URL'] }}" target="_blank" class="text-blue-500 hover:underline">Lihat Dokumen</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perbandingan dengan Rencana Tahunan & Visualisasi -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan dengan Rencana Tahunan (Tahun {{ tahun_laporan }})</h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+            <!-- Chart: Realisasi vs Rencana Triwulan per Level -->
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">Realisasi vs Rencana Triwulan per Level</h4>
+                <canvas id="realisasiRencanaChart"></canvas>
+            </div>
+
+            <!-- Chart: Progress Realisasi Triwulan Keseluruhan -->
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">Progress Realisasi Triwulan Keseluruhan</h4>
+                <canvas id="overallProgressChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detail Perbandingan per Level -->
+        <div class="mt-8">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Detail Per Level</h3>
+            {% for level, data in comparison_data.items() %}
+                <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <h4 class="text-lg font-bold text-gray-800 mb-2">{{ level }}</h4>
+                    <div class="flex items-center mb-1">
+                        <span class="w-56 font-semibold">Rencana Triwulan Ini:</span>
+                        <span class="text-gray-700">{{ data.rencana_tw }}</span>
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <span class="w-56 font-semibold">Realisasi Triwulan Ini:</span>
+                        <span class="text-gray-700">{{ data.realisasi_tw }}</span>
+                    </div>
+                    <div class="flex items-center mb-3">
+                        <span class="w-56 font-semibold">Rencana Tahunan (Proporsi TW ini):</span>
+                        <span class="text-gray-700">{{ data.rencana_tahun }}</span>
+                    </div>
+
+                    {% set progress_percentage = (data.realisasi_tw / (data.rencana_tw if data.rencana_tw > 0 else 1) * 100) | round(2) %}
+                    <p class="text-sm mt-2 {% if progress_percentage >= 100 %}text-green-600{% elif progress_percentage >= 75 %}text-yellow-600{% else %}text-red-600{% endif %} font-semibold">
+                        Progress terhadap Rencana Triwulan: {{ progress_percentage }}%
+                        {% if progress_percentage >= 100 %} (Target Tercapai!){% elif progress_percentage < 100 and progress_percentage >= 75 %} (Perlu Peningkatan){% else %} (Perlu Peningkatan){% endif %}
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    <div class="text-center">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Kembali ke Detail PJP
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const comparisonData = JSON.parse('{{ comparison_data | safe }}');
+
+        // --- Chart 1: Realisasi vs Rencana Triwulan per Level (Bar Chart) ---
+        const levels = Object.keys(comparisonData);
+        const rencanaTwData = levels.map(level => comparisonData[level].rencana_tw);
+        const realisasiTwData = levels.map(level => comparisonData[level].realisasi_tw);
+
+        const ctx1 = document.getElementById('realisasiRencanaChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: levels,
+                datasets: [{
+                    label: 'Rencana Triwulan',
+                    data: rencanaTwData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)', // Blue-500
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }, {
+                    label: 'Realisasi Triwulan',
+                    data: realisasiTwData,
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)', // Green-500
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: false, // Title is handled by h4 tag
+                        text: 'Rencana vs Realisasi Triwulan per Level'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Sertifikasi'
+                        },
+                        ticks: {
+                            precision: 0 // Ensure integer ticks for count
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- Chart 2: Progress Realisasi Triwulan Keseluruhan (Doughnut Chart) ---
+        let totalRencanaTw = 0;
+        let totalRealisasiTw = 0;
+
+        levels.forEach(level => {
+            totalRencanaTw += comparisonData[level].rencana_tw;
+            totalRealisasiTw += comparisonData[level].realisasi_tw;
+        });
+
+        const percentageAchieved = totalRencanaTw > 0 ? (totalRealisasiTw / totalRencanaTw * 100) : 0;
+        const percentageRemaining = 100 - percentageAchieved;
+
+        const ctx2 = document.getElementById('overallProgressChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Realisasi Tercapai', 'Sisa Rencana'],
+                datasets: [{
+                    data: [percentageAchieved.toFixed(2), percentageRemaining.toFixed(2)],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)', // Green-500
+                        'rgba(239, 68, 68, 0.8)'  // Red-500
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: false,
+                        text: 'Progress Realisasi Triwulan Keseluruhan'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.formattedValue + '%';
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                    }
+                },
+                cutout: '70%', // Makes it a doughnut chart
+            }
+        });
+    });
+</script>
+{% endblock %}

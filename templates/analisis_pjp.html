@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Analisis Berdasarkan PJP{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Analisis Berdasarkan PJP</h1>
+    <p class="text-center text-gray-600 mb-8">Pilih PJP di bawah untuk melihat analisis lebih lanjut:</p>
+
+    <div class="mb-6 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+        <input type="text" id="pjpSearch" onkeyup="filterPJP()" placeholder="Cari PJP berdasarkan nama atau sandi..."
+               class="p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow max-w-md w-full sm:w-auto">
+        <button onclick="sortPJP('nama')"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-5 rounded-lg
+                       shadow-md transition duration-300 ease-in-out">
+            Urutkan Berdasarkan Nama
+        </button>
+        <button onclick="sortPJP('sandi')"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-5 rounded-lg
+                       shadow-md transition duration-300 ease-in-out">
+            Urutkan Berdasarkan Sandi
+        </button>
+    </div>
+
+    <div id="pjpList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for pjp in pjp_companies %}
+        <a href="{{ url_for('show_pjp_detail', sandi=pjp.sandi) }}"
+           class="pjp-item bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg
+                  shadow-md hover:shadow-lg transition duration-300 ease-in-out
+                  flex flex-col items-center justify-center text-center">
+            <span class="text-lg font-bold">{{ pjp.nama }}</span>
+            <span class="text-sm text-blue-100">Sandi: {{ pjp.sandi }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Get the initial list of PJP companies from the server-rendered data
+    const pjpCompaniesData = JSON.parse('{{ pjp_companies | tojson | safe }}');
+    let currentSortOrder = ''; // 'nama_asc', 'nama_desc', 'sandi_asc', 'sandi_desc'
+
+    function renderPJPList(data) {
+        const pjpListContainer = document.getElementById('pjpList');
+        pjpListContainer.innerHTML = ''; // Clear current list
+
+        data.forEach(pjp => {
+            const link = document.createElement('a');
+            link.href = `{{ url_for('show_pjp_detail', sandi='PJP_SANDI_PLACEHOLDER') }}`.replace('PJP_SANDI_PLACEHOLDER', pjp.sandi);
+            link.className = `pjp-item bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg
+                             shadow-md hover:shadow-lg transition duration-300 ease-in-out
+                             flex flex-col items-center justify-center text-center`;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'text-lg font-bold';
+            nameSpan.textContent = pjp.nama;
+
+            const sandiSpan = document.createElement('span');
+            sandiSpan.className = 'text-sm text-blue-100';
+            sandiSpan.textContent = `Sandi: ${pjp.sandi}`;
+
+            link.appendChild(nameSpan);
+            link.appendChild(sandiSpan);
+            pjpListContainer.appendChild(link);
+        });
+    }
+
+    function filterPJP() {
+        const searchInput = document.getElementById('pjpSearch');
+        const searchTerm = searchInput.value.toLowerCase();
+
+        const filteredPJP = pjpCompaniesData.filter(pjp => {
+            return pjp.nama.toLowerCase().includes(searchTerm) || pjp.sandi.toLowerCase().includes(searchTerm);
+        });
+
+        // Re-render the filtered and possibly sorted list
+        let sortedAndFilteredData = [...filteredPJP]; // Create a copy for sorting
+        if (currentSortOrder) {
+            sortedAndFilteredData.sort((a, b) => {
+                let valA, valB;
+                if (currentSortOrder.startsWith('nama')) {
+                    valA = a.nama.toLowerCase();
+                    valB = b.nama.toLowerCase();
+                } else { // sandi
+                    valA = a.sandi.toLowerCase();
+                    valB = b.sandi.toLowerCase();
+                }
+
+                if (valA < valB) return currentSortOrder.endsWith('asc') ? -1 : 1;
+                if (valA > valB) return currentSortOrder.endsWith('asc') ? 1 : -1;
+                return 0;
+            });
+        }
+        renderPJPList(sortedAndFilteredData);
+    }
+
+    function sortPJP(criteria) {
+        let sortedPJP = [...pjpCompaniesData]; // Start with the original data
+
+        sortedPJP.sort((a, b) => {
+            let valA, valB;
+            if (criteria === 'nama') {
+                valA = a.nama.toLowerCase();
+                valB = b.nama.toLowerCase();
+            } else { // criteria === 'sandi'
+                valA = a.sandi.toLowerCase();
+                valB = b.sandi.toLowerCase();
+            }
+
+            if (valA < valB) return -1;
+            if (valA > valB) return 1;
+            return 0;
+        });
+
+        // Toggle sort order (ascending/descending) if clicking the same criteria again
+        if (currentSortOrder === `${criteria}_asc`) {
+            sortedPJP.reverse();
+            currentSortOrder = `${criteria}_desc`;
+        } else {
+            currentSortOrder = `${criteria}_asc`;
+        }
+
+        renderPJPList(sortedPJP);
+        // After sorting, re-apply the filter in case there was active search input
+        filterPJP();
+    }
+
+    // Initial render when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        renderPJPList(pjpCompaniesData);
+        filterPJP(); // Apply any initial filter if search box has value
+    });
+</script>
+{% endblock %}

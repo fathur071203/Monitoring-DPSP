@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan LTDBB - {{ pjp_name }} ({{ report.get('Nama Periode Laporan', 'N/A') }}/{{ report.get('Tahun Laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard LTDBB dipindahkan ke sini -->
+    <div class="mb-6">
+        <a href="{{ url_for('ltdbb_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard LTDBB
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan Transaksi Dana Bukan Bank (LTDBB)</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Periode: {{ report.get('Nama Periode Laporan', 'N/A') }}/{{ report.get('Tahun Laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat:</span> {{ report.get('Nomor Surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report.get('Tanggal Surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Jumlah Transaksi Keluar:</span> {{ report.get('Number Outgoing Transactions', 0) }}</p>
+                        <p><span class="font-semibold">Nilai Transaksi Keluar:</span> Rp {{ "{:,.0f}".format(report.get('Amount Outgoing Transactions', 0)) }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Jumlah Transaksi Masuk:</span> {{ report.get('Number Incoming Transactions', 0) }}</p>
+                        <p><span class="font-semibold">Nilai Transaksi Masuk:</span> Rp {{ "{:,.0f}".format(report.get('Amount Incoming Transactions', 0)) }}</p>
+                        <p><span class="font-semibold">Jumlah Transaksi Domestik:</span> {{ report.get('Number Domestic Transactions', 0) }}</p>
+                        <p><span class="font-semibold">Nilai Transaksi Domestik:</span> Rp {{ "{:,.0f}".format(report.get('Amount Domestic Transactions', 0)) }}</p>
+                        <p><span class="font-semibold">Keterangan:</span> {{ report.get('Keterangan', 'N/A') }}</p>
+                        <p><span class="font-semibold">Created at:</span> {{ report.get('Created at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New KPI Cards Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- KPI Card: Jumlah Transaksi Keluar -->
+                <div class="bg-red-100 border-b-4 border-red-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-red-700">Jumlah Transaksi Keluar</p>
+                    <p class="text-2xl font-bold text-red-900 mt-1">{{ report.get('Number Outgoing Transactions', 0) }}</p>
+                </div>
+                <!-- KPI Card: Nilai Transaksi Keluar -->
+                <div class="bg-red-100 border-b-4 border-red-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-red-700">Nilai Transaksi Keluar</p>
+                    <p class="text-2xl font-bold text-red-900 mt-1">Rp {{ "{:,.0f}".format(report.get('Amount Outgoing Transactions', 0)) }}</p>
+                </div>
+                <!-- KPI Card: Jumlah Transaksi Masuk -->
+                <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-green-700">Jumlah Transaksi Masuk</p>
+                    <p class="text-2xl font-bold text-green-900 mt-1">{{ report.get('Number Incoming Transactions', 0) }}</p>
+                </div>
+                <!-- KPI Card: Nilai Transaksi Masuk -->
+                <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-green-700">Nilai Transaksi Masuk</p>
+                    <p class="text-2xl font-bold text-green-900 mt-1">Rp {{ "{:,.0f}".format(report.get('Amount Incoming Transactions', 0)) }}</p>
+                </div>
+                <!-- KPI Card: Jumlah Transaksi Domestik -->
+                <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-purple-700">Jumlah Transaksi Domestik</p>
+                    <p class="text-2xl font-bold text-purple-900 mt-1">{{ report.get('Number Domestic Transactions', 0) }}</p>
+                </div>
+                <!-- KPI Card: Nilai Transaksi Domestik -->
+                <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-sm font-medium text-purple-700">Nilai Transaksi Domestik</p>
+                    <p class="text-2xl font-bold text-purple-900 mt-1">Rp {{ "{:,.0f}".format(report.get('Amount Domestic Transactions', 0)) }}</p>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Detail Laporan (Contoh Bar Chart) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Visualisasi Laporan Ini</h4>
+                <div class="w-full h-64">
+                    <canvas id="ltdbbDetailChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) -->
+        <div class="lg:w-1/2 flex flex-col">
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report.get('File URL') and report.get('File URL') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden"> {# Increased height for better viewing #}
+                        <iframe src="{{ report.get('File URL') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report.get('File URL') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- New Section: Comparison with Last 5 Months -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 mt-8">
+        <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan dengan 5 Bulan Terakhir (Jumlah Transaksi)</h4>
+        <div class="w-full h-80">
+            <canvas id="comparison5MonthsNumChart"></canvas>
+        </div>
+        <h4 class="text-xl font-semibold text-gray-700 mb-4 mt-6 border-b pb-2">Perbandingan dengan 5 Bulan Terakhir (Nilai Transaksi)</h4>
+        <div class="w-full h-80">
+            <canvas id="comparison5MonthsAmtChart"></canvas>
+        </div>
+    </div>
+
+    <!-- New Section: Year-on-Year Comparison (Same Month) -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Perbandingan Tahunan (Bulan yang Sama) - Jumlah Transaksi</h4>
+        <div class="w-full h-80">
+            <canvas id="comparisonYearlyNumChart"></canvas>
+        </div>
+        <h4 class="text-xl font-semibold text-gray-700 mb-4 mt-6 border-b pb-2">Perbandingan Tahunan (Bulan yang Sama) - Nilai Transaksi</h4>
+        <div class="w-full h-80">
+            <canvas id="comparisonYearlyAmtChart"></canvas>
+        </div>
+    </div>
+
+    {# Menghapus bagian tombol "Kembali ke Dashboard LTDBB" yang lama #}
+    {#
+    <div class="text-center mt-8">
+        <a href="{{ url_for('ltdbb_report', sandi=sandi_pjp) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Kembali ke Dashboard LTDBB
+        </a>
+    </div>
+    #}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const report = JSON.parse('{{ report | tojson | safe }}');
+        // Removed |tojson filter as data is already JSON dumped in Flask
+        const comparisonData5Months = JSON.parse('{{ comparison_data_5_months | safe }}');
+        const comparisonSameMonthYearly = JSON.parse('{{ comparison_same_month_yearly | safe }}');
+
+        // Helper to format currency
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper to get month name from month number (string '01' to 'Januari')
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        function getMonthName(monthNumStr) {
+            return monthNames[parseInt(monthNumStr, 10) - 1];
+        }
+
+        // Chart for single LTDBB report details (example: comparison of transaction amounts)
+        const ctx = document.getElementById('ltdbbDetailChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Transaksi Keluar', 'Transaksi Masuk', 'Transaksi Domestik'],
+                datasets: [{
+                    label: 'Nilai Transaksi (Rp)',
+                    data: [
+                        report['Amount Outgoing Transactions'],
+                        report['Amount Incoming Transactions'],
+                        report['Amount Domestic Transactions']
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 159, 64, 0.7)', // Orange
+                        'rgba(54, 162, 235, 0.7)', // Blue
+                        'rgba(75, 192, 192, 0.7)'  // Green
+                    ],
+                    borderColor: [
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += formatRupiah(context.raw);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nilai Transaksi (Rp)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatRupiah(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart for comparison with last 5 months (Number Transactions)
+        const ctx5MonthsNum = document.getElementById('comparison5MonthsNumChart').getContext('2d');
+        new Chart(ctx5MonthsNum, {
+            type: 'bar',
+            data: {
+                labels: comparisonData5Months.map(d => `${getMonthName(d['Periode Laporan'])} ${d['Tahun Laporan']}`),
+                datasets: [
+                    {
+                        label: 'Jumlah Transaksi Keluar',
+                        data: comparisonData5Months.map(d => d['Number Outgoing Transactions']),
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)', // Red
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Jumlah Transaksi Masuk',
+                        data: comparisonData5Months.map(d => d['Number Incoming Transactions']),
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Jumlah Transaksi Domestik',
+                        data: comparisonData5Months.map(d => d['Number Domestic Transactions']),
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Transaksi' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+
+        // Chart for comparison with last 5 months (Amount Transactions)
+        const ctx5MonthsAmt = document.getElementById('comparison5MonthsAmtChart').getContext('2d');
+        new Chart(ctx5MonthsAmt, {
+            type: 'bar',
+            data: {
+                labels: comparisonData5Months.map(d => `${getMonthName(d['Periode Laporan'])} ${d['Tahun Laporan']}`),
+                datasets: [
+                    {
+                        label: 'Nilai Transaksi Keluar',
+                        data: comparisonData5Months.map(d => d['Amount Outgoing Transactions']),
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)', // Orange
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Nilai Transaksi Masuk',
+                        data: comparisonData5Months.map(d => d['Amount Incoming Transactions']),
+                        backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Nilai Transaksi Domestik',
+                        data: comparisonData5Months.map(d => d['Amount Domestic Transactions']),
+                        backgroundColor: 'rgba(255, 205, 86, 0.7)', // Yellow
+                        borderColor: 'rgba(255, 205, 86, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatRupiah(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Periode Laporan' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Nilai Transaksi (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+
+        // Chart for Year-on-Year Comparison (Number Transactions)
+        const ctxYearlyNum = document.getElementById('comparisonYearlyNumChart').getContext('2d');
+        const yearlyNumLabels = ['Tahun Sekarang'];
+        const yearlyNumDataOutgoing = [comparisonSameMonthYearly.current_year_report['Number Outgoing Transactions'] || 0];
+        const yearlyNumDataIncoming = [comparisonSameMonthYearly.current_year_report['Number Incoming Transactions'] || 0];
+        const yearlyNumDataDomestic = [comparisonSameMonthYearly.current_year_report['Number Domestic Transactions'] || 0];
+
+        if (comparisonSameMonthYearly.previous_year_report) {
+            yearlyNumLabels.unshift('Tahun Lalu');
+            yearlyNumDataOutgoing.unshift(comparisonSameMonthYearly.previous_year_report['Number Outgoing Transactions'] || 0);
+            yearlyNumDataIncoming.unshift(comparisonSameMonthYearly.previous_year_report['Number Incoming Transactions'] || 0);
+            yearlyNumDataDomestic.unshift(comparisonSameMonthYearly.previous_year_report['Number Domestic Transactions'] || 0);
+        }
+
+        new Chart(ctxYearlyNum, {
+            type: 'bar',
+            data: {
+                labels: yearlyNumLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Transaksi Keluar',
+                        data: yearlyNumDataOutgoing,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)', // Red
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Jumlah Transaksi Masuk',
+                        data: yearlyNumDataIncoming,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Jumlah Transaksi Domestik',
+                        data: yearlyNumDataDomestic,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Transaksi' },
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+
+        // Chart for Year-on-Year Comparison (Amount Transactions)
+        const ctxYearlyAmt = document.getElementById('comparisonYearlyAmtChart').getContext('2d');
+        const yearlyAmtLabels = ['Tahun Sekarang'];
+        const yearlyAmtDataOutgoing = [comparisonSameMonthYearly.current_year_report['Amount Outgoing Transactions'] || 0];
+        const yearlyAmtDataIncoming = [comparisonSameMonthYearly.current_year_report['Amount Incoming Transactions'] || 0];
+        const yearlyAmtDataDomestic = [comparisonSameMonthYearly.current_year_report['Amount Domestic Transactions'] || 0];
+
+        if (comparisonSameMonthYearly.previous_year_report) {
+            yearlyAmtLabels.unshift('Tahun Lalu');
+            yearlyAmtDataOutgoing.unshift(comparisonSameMonthYearly.previous_year_report['Amount Outgoing Transactions'] || 0);
+            yearlyAmtDataIncoming.unshift(comparisonSameMonthYearly.previous_year_report['Amount Incoming Transactions'] || 0);
+            yearlyAmtDataDomestic.unshift(comparisonSameMonthYearly.previous_year_report['Amount Domestic Transactions'] || 0);
+        }
+
+        new Chart(ctxYearlyAmt, {
+            type: 'bar',
+            data: {
+                labels: yearlyAmtLabels,
+                datasets: [
+                    {
+                        label: 'Nilai Transaksi Keluar',
+                        data: yearlyAmtDataOutgoing,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)', // Orange
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Nilai Transaksi Masuk',
+                        data: yearlyAmtDataIncoming,
+                        backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Nilai Transaksi Domestik',
+                        data: yearlyAmtDataDomestic,
+                        backgroundColor: 'rgba(255, 205, 86, 0.7)', // Yellow
+                        borderColor: 'rgba(255, 205, 86, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatRupiah(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tahun' } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Nilai Transaksi (Rp)' },
+                        ticks: { callback: function(value) { return formatRupiah(value); } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Laporan DTTOT - {{ pjp_name }} ({{ report_data.get('nama_periode_laporan', 'N/A') }}/{{ report_data.get('tahun_laporan', 'N/A') }}){% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Dashboard DTTOT -->
+    <div class="mb-6">
+        <a href="{{ url_for('dttot_report', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Dashboard DTTOT
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detail Laporan DTTOT</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+    <h3 class="text-xl font-medium text-gray-600 mb-8 text-center">Periode: {{ report_data.get('nama_periode_laporan', 'N/A') }} {{ report_data.get('tahun_laporan', 'N/A') }}</h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column: Report Details & Visualizations -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Informasi Laporan -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Informasi Laporan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p><span class="font-semibold">Nomor Surat Kepolisian:</span> {{ report_data.get('nomor_surat_kepolisian', 'N/A') }}</p>
+                        <p><span class="font-semibold">Tanggal Surat:</span> {{ report_data.get('tanggal_surat', 'N/A') }}</p>
+                        <p><span class="font-semibold">Perihal:</span> {{ report_data.get('perihal', 'N/A') }}</p>
+                        <p><span class="font-semibold">Jumlah Terduga Teroris:</span> {{ report_data.get('jumlah_terduga_teroris', 0) }}</p>
+                    </div>
+                    <div>
+                        <p><span class="font-semibold">Organisasi Teroris:</span> {{ report_data.get('organisasi_teroris', 'N/A') }}</p>
+                        <p><span class="font-semibold">Keterangan:</span> {{ report_data.get('keterangan', 'N/A') }}</p>
+                        <p><span class="font-semibold">Created at:</span> {{ report_data.get('created_at', 'N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Visualisasi Perbandingan 5 Bulan Terakhir -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Terduga Teroris (5 Bulan Terakhir)</h4>
+                <div class="w-full h-64">
+                    <canvas id="dttotTrend5MonthsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Dokumen Laporan (PDF Viewer) and Yearly Comparison -->
+        <div class="lg:w-1/2 flex flex-col space-y-8">
+            <!-- Bagian Visualisasi Perbandingan Tahunan (Bulan yang Sama) -->
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
+                    Perbandingan Tahunan (Bulan {{ report_data.get('nama_periode_laporan', 'N/A') }} Saja)
+                </h4>
+                <div class="w-full h-64">
+                    <canvas id="yearlyComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 flex-grow">
+                <h4 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Dokumen Laporan</h4>
+                {% if report_data.get('file_url') and report_data.get('file_url') != '#' %}
+                    <div class="w-full h-[700px] bg-gray-200 rounded-lg overflow-hidden">
+                        <iframe src="{{ report_data.get('file_url') }}" class="w-full h-full border-none"></iframe>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Jika dokumen tidak tampil di atas, Anda bisa <a href="{{ report_data.get('file_url') }}" target="_blank" class="text-blue-500 hover:underline">mengunduh atau melihatnya di tab baru</a>.
+                    </p>
+                {% else %}
+                    <p class="text-gray-600 text-center">Tidak ada dokumen PDF yang tersedia untuk laporan ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Removed the hidden div and replaced with script tags for robust JSON passing #}
+<script type="application/json" id="report-data">
+    {{ report_data | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-5-months-data">
+    {{ comparison_data_5_months | tojson | safe }}
+</script>
+<script type="application/json" id="comparison-yearly-data">
+    {{ comparison_same_month_yearly | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Embed JSON directly into the script
+        let report;
+        let comparisonData5Months;
+        let comparisonSameMonthYearly;
+
+        try {
+            report = JSON.parse(document.getElementById('report-data').textContent.trim()); // Added .trim()
+            console.log("Parsed report data:", report); // Log for debugging
+        } catch (e) {
+            console.error("Error parsing report JSON:", e);
+            report = {};
+        }
+
+        try {
+            comparisonData5Months = JSON.parse(document.getElementById('comparison-5-months-data').textContent.trim()); // Added .trim()
+            console.log("Parsed comparisonData5Months:", comparisonData5Months); // Log for debugging
+        } catch (e) {
+            console.error("Error parsing comparisonData5Months JSON:", e);
+            comparisonData5Months = [];
+        }
+
+        try {
+            comparisonSameMonthYearly = JSON.parse(document.getElementById('comparison-yearly-data').textContent.trim()); // Added .trim()
+            console.log("Parsed comparisonSameMonthYearly:", comparisonSameMonthYearly); // Log for debugging
+        } catch (e) {
+            console.error("Error parsing comparisonSameMonthYearly JSON:", e);
+            comparisonSameMonthYearly = {};
+        }
+
+        // Helper to get month name from month number/name
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        function getMonthName(monthInput) {
+            const monthMap = {
+                "01": "Januari", "02": "Februari", "03": "Maret", "04": "April", "05": "Mei", "06": "Juni",
+                "07": "Juli", "08": "Agustus", "09": "September", "10": "Oktober", "11": "November", "12": "Desember",
+                "Januari": "Januari", "Februari": "Februari", "Maret": "Maret", "April": "April", "Mei": "Mei", "Juni": "Juni",
+                "Juli": "Juli", "Agustus": "Agustus", "September": "September", "Oktober": "Oktober", "November": "November", "Desember": "Desember"
+            };
+            return monthMap[monthInput] || monthInput;
+        }
+
+        // Helper to convert month name to number (for sorting)
+        function getMonthNumber(monthName) {
+            const monthNameToNum = {
+                "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+                "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12,
+                "01": 1, "02": 2, "03": 3, "04": 4, "05": 5, "06": 6,
+                "07": 7, "08": 8, "09": 9, "10": 10, "11": 11, "12": 12
+            };
+            return monthNameToNum[monthName] || 0;
+        }
+
+        // --- Grafik Garis: Tren Jumlah Terduga Teroris (5 Bulan Terakhir) ---
+        const labels5Months = comparisonData5Months.map(d => `${getMonthName(d['periode_laporan'])} ${d['tahun_laporan']}`);
+        const jumlahDTTOT5Months = comparisonData5Months.map(d => d['jumlah_terduga_teroris']);
+
+        const currentReportLabel = `${getMonthName(report['nama_periode_laporan'] || report['periode_laporan'])} ${report['tahun_laporan']}`;
+        const currentReportIndex5Months = labels5Months.indexOf(currentReportLabel);
+
+        const pointStyle5Months = new Array(labels5Months.length).fill('circle');
+        const pointRadius5Months = new Array(labels5Months.length).fill(3);
+        const pointBackgroundColor = new Array(labels5Months.length).fill('rgb(75, 192, 192)');
+        const pointBorderColor = new Array(labels5Months.length).fill('rgb(75, 192, 192)');
+
+        if (currentReportIndex5Months !== -1) {
+            pointStyle5Months[currentReportIndex5Months] = 'star';
+            pointRadius5Months[currentReportIndex5Months] = 8;
+            pointBackgroundColor[currentReportIndex5Months] = 'rgb(255, 205, 86)';
+            pointBorderColor[currentReportIndex5Months] = 'rgb(255, 159, 64)';
+        }
+
+        const ctx5Months = document.getElementById('dttotTrend5MonthsChart').getContext('2d');
+        new Chart(ctx5Months, {
+            type: 'line',
+            data: {
+                labels: labels5Months,
+                datasets: [
+                    {
+                        label: 'Jumlah Terduga Teroris',
+                        data: jumlahDTTOT5Months,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: (context) => {
+                            // Apply background color only for the highlighted point's area
+                            const index = context.dataIndex;
+                            if (index === currentReportIndex5Months) {
+                                return 'rgba(75, 192, 192, 0.5)'; // Highlighted area color
+                            }
+                            return 'rgba(75, 192, 192, 0.0)'; // Transparent for others
+                        },
+                        tension: 0.1,
+                        yAxisID: 'y-jumlah',
+                        pointStyle: pointStyle5Months,
+                        radius: pointRadius5Months,
+                        pointBackgroundColor: pointBackgroundColor,
+                        pointBorderColor: pointBorderColor,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportIndex5Months) {
+                                    return `Jumlah Terduga Teroris Periode Ini: ${context.raw}`;
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    'y-jumlah': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Terduga Teroris'
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- Grafik Batang: Perbandingan Tahunan (Bulan yang Sama) ---
+        const yearlyLabels = [];
+        const yearlyDataDTTOT = [];
+
+        if (comparisonSameMonthYearly.previous_year_report) {
+            yearlyLabels.push(`Tahun Lalu (${comparisonSameMonthYearly.previous_year_report['tahun_laporan']})`);
+            yearlyDataDTTOT.push(comparisonSameMonthYearly.previous_year_report['jumlah_terduga_teroris'] || 0);
+        }
+        
+        yearlyLabels.push(`Tahun Sekarang (${comparisonSameMonthYearly.current_year_report['tahun_laporan']})`);
+        yearlyDataDTTOT.push(comparisonSameMonthYearly.current_year_report['jumlah_terduga_teroris'] || 0);
+
+
+        const backgroundColorYearly = new Array(yearlyLabels.length).fill('rgba(54, 162, 235, 0.7)');
+        const borderColorYearly = new Array(yearlyLabels.length).fill('rgba(54, 162, 235, 1)');
+
+        const currentReportYearIndex = yearlyLabels.indexOf(`Tahun Sekarang (${comparisonSameMonthYearly.current_year_report['tahun_laporan']})`);
+        if (currentReportYearIndex !== -1) {
+            backgroundColorYearly[currentReportYearIndex] = 'rgba(0, 128, 0, 0.9)';
+            borderColorYearly[currentReportYearIndex] = 'rgba(255, 255, 255, 1)';
+        }
+
+        const ctxYearly = document.getElementById('yearlyComparisonChart').getContext('2d');
+        new Chart(ctxYearly, {
+            type: 'bar',
+            data: {
+                labels: yearlyLabels,
+                datasets: [
+                    {
+                        label: 'Jumlah Terduga Teroris',
+                        data: yearlyDataDTTOT,
+                        backgroundColor: backgroundColorYearly,
+                        borderColor: borderColorYearly,
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (context.dataIndex === currentReportYearIndex) {
+                                    return `Jumlah Terduga Teroris Periode Ini: ${context.raw}`;
+                                } else {
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tahun Laporan'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Terduga Teroris'
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

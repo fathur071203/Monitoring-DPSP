@@ -1,0 +1,1371 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Laporan LTDBB - {{ pjp_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Tombol Kembali ke Detail PJP dipindahkan ke sini -->
+    <div class="mb-6">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+            </svg>
+            Kembali ke Detail PJP
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard Laporan Transaksi Dana Bukan Bank (LTDBB)</h1>
+    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">{{ pjp_name }} (Sandi: {{ sandi_pjp }})</h2>
+
+    <!-- A. FILTER PANEL -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="flex flex-col">
+            <label for="startYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Awal:</label>
+            <select id="startYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for year in available_years %}
+                <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endYear" class="text-sm font-medium text-gray-700 mb-1">Tahun Akhir:</label>
+            <select id="endYear" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if loop.last %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="startMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Awal:</label>
+            <select id="startMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}">{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col">
+            <label for="endMonth" class="text-sm font-medium text-gray-700 mb-1">Bulan Akhir:</label>
+            <select id="endMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% set months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"] %}
+                {% for month_num in range(1, 13) %}
+                <option value="{{ '%02d' | format(month_num) }}" {% if loop.last %}selected{% endif %}>{{ months[month_num-1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Terapkan Filter
+        </button>
+        <button id="resetFilterBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Reset Filter
+        </button>
+        <div class="flex items-center">
+            <input type="checkbox" id="showInsightCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+            <label for="showInsightCheckbox" class="ml-2 text-gray-700">Tampilkan Insight Otomatis</label>
+        </div>
+    </div>
+
+    <!-- B. KPI CARD SECTION - Top and Middle Rows -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+        <!-- KPI Total Semua Transaksi (Jumlah) -->
+        <div class="bg-blue-100 border-b-4 border-blue-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300 md:col-span-2 lg:col-span-2">
+            <p class="text-sm font-medium text-blue-700">Total Semua Transaksi (Jumlah)</p>
+            <p id="kpiTotalAllNum" class="text-3xl font-bold text-blue-900 mt-1">0</p>
+            <p class="text-xs text-blue-500 mt-1">Ringkasan seluruh transaksi</p>
+        </div>
+        <!-- KPI Total Semua Transaksi (Nilai) -->
+        <div class="bg-blue-100 border-b-4 border-blue-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300 md:col-span-2 lg:col-span-2">
+            <p class="text-sm font-medium text-blue-700">Total Semua Transaksi (Nilai)</p>
+            <p id="kpiTotalAllAmt" class="text-3xl font-bold text-blue-900 mt-1">Rp 0</p>
+            <p class="text-xs text-blue-500 mt-1">Ringkasan nilai seluruh transaksi</p>
+        </div>
+
+        <!-- KPI Transaksi Keluar -->
+        <div class="bg-red-100 border-b-4 border-red-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300">
+            <p class="text-sm font-medium text-red-700">Jml Transaksi Keluar</p>
+            <p id="kpiNumOutgoing" class="text-2xl font-bold text-red-900 mt-1">0</p>
+            <p class="text-xs text-red-500 mt-1">Bulan Tertinggi: <span id="kpiHighestNumOutgoingMonth">N/A</span> (<span id="kpiHighestNumOutgoingValue">0</span>)</p>
+        </div>
+        <div class="bg-red-100 border-b-4 border-red-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300">
+            <p class="text-sm font-medium text-red-700">Nilai Transaksi Keluar</p>
+            <p id="kpiAmtOutgoing" class="text-2xl font-bold text-red-900 mt-1">Rp 0</p>
+            <p class="text-xs text-red-500 mt-1">Bulan Tertinggi: <span id="kpiHighestAmtOutgoingMonth">N/A</span> (<span id="kpiHighestAmtOutgoingValue">Rp 0</span>)</p>
+        </div>
+
+        <!-- KPI Transaksi Masuk -->
+        <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300">
+            <p class="text-sm font-medium text-green-700">Jml Transaksi Masuk</p>
+            <p id="kpiNumIncoming" class="text-2xl font-bold text-green-900 mt-1">0</p>
+            <p class="text-xs text-green-500 mt-1">Bulan Tertinggi: <span id="kpiHighestNumIncomingMonth">N/A</span> (<span id="kpiHighestNumIncomingValue">0</span>)</p>
+        </div>
+        <div class="bg-green-100 border-b-4 border-green-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300">
+            <p class="text-sm font-medium text-green-700">Nilai Transaksi Masuk</p>
+            <p id="kpiAmtIncoming" class="text-2xl font-bold text-green-900 mt-1">Rp 0</p>
+            <p class="text-xs text-green-500 mt-1">Bulan Tertinggi: <span id="kpiHighestAmtIncomingMonth">N/A</span> (<span id="kpiHighestAmtIncomingValue">Rp 0</span>)</p>
+        </div>
+    </div>
+
+    <!-- NEW SECTION FOR DOMESTIC TRANSACTIONS TO ENSURE CENTERING -->
+    <div class="flex justify-center gap-4 mb-8 flex-wrap w-full"> {# Use w-full here to ensure it takes full width for centering its children #}
+        <!-- KPI Transaksi Domestik -->
+        <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300 w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(50%-0.5rem)] xl:w-[calc(25%-0.75rem)]"> {# Adjusted widths for responsiveness and gap #}
+            <p class="text-sm font-medium text-purple-700">Jml Transaksi Domestik</p>
+            <p id="kpiNumDomestic" class="text-2xl font-bold text-purple-900 mt-1">0</p>
+            <p class="text-xs text-purple-500 mt-1">Bulan Tertinggi: <span id="kpiHighestNumDomesticMonth">N/A</span> (<span id="kpiHighestNumDomesticValue">0</span>)</p>
+        </div>
+        <div class="bg-purple-100 border-b-4 border-purple-500 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-xl transition-shadow duration-300 w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(50%-0.5rem)] xl:w-[calc(25%-0.75rem)]"> {# Adjusted widths for responsiveness and gap #}
+            <p class="text-sm font-medium text-purple-700">Nilai Transaksi Domestik</p>
+            <p id="kpiAmtDomestic" class="text-2xl font-bold text-purple-900 mt-1">Rp 0</p>
+            <p class="text-xs text-purple-500 mt-1">Bulan Tertinggi: <span id="kpiHighestAmtDomesticMonth">N/A</span> (<span id="kpiHighestAmtDomesticValue">Rp 0</span>)</p>
+        </div>
+    </div>
+
+    <!-- C. VISUALISASI UTAMA (Row 2 – Time Series) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Jumlah Transaksi per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="numTransactionTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Nilai Transaksi per Bulan</h3>
+            <div class="w-full h-80">
+                <canvas id="amtTransactionTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Tren Total Jumlah dan Nilai Transaksi per Tahun -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Tren Total Jumlah dan Nilai Transaksi per Tahun</h3>
+        <div class="w-full h-80">
+            <canvas id="yearlyTransactionTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- D. KOMPOSISI TRANSAKSI (Row 3 – Pie/Doughnut Chart) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Jumlah Transaksi (Periode Terpilih)</h3>
+            <div class="w-full h-80">
+                <canvas id="numTransactionCompositionChart"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Distribusi Nilai Transaksi (Periode Terpilih)</h3>
+            <div class="w-full h-80">
+                <canvas id="amtTransactionCompositionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Top 5 and Bottom 5 Transactions Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <!-- Outgoing Transactions -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Transaksi Keluar (Top 5 & Bottom 5)</h3>
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Top 5 (Nilai)</h4>
+                    <ul id="top5OutgoingAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Bottom 5 (Nilai)</h4>
+                    <ul id="bottom5OutgoingAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incoming Transactions -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Transaksi Masuk (Top 5 & Bottom 5)</h3>
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Top 5 (Nilai)</h4>
+                    <ul id="top5IncomingAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Bottom 5 (Nilai)</h4>
+                    <ul id="bottom5IncomingAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Domestic Transactions -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Transaksi Domestik (Top 5 & Bottom 5)</h3>
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Top 5 (Nilai)</h4>
+                    <ul id="top5DomesticAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="md:w-1/2">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-2">Bottom 5 (Nilai)</h4>
+                    <ul id="bottom5DomesticAmt" class="list-none text-gray-700 space-y-1">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- E. HEATMAP MATRIX: Jumlah Transaksi Bulanan per Tahun (Row 4) -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Heatmap: Total Jumlah Transaksi Bulanan per Tahun</h3>
+        <div class="overflow-x-auto">
+            <table id="heatmapTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    <!-- Heatmap rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Status Map -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Upload Laporan LTDBB Bulanan</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Tahun</th>
+                        {% set months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] %}
+                        {% for month in months %}
+                        <th class="py-3 px-6 text-center">{{ month }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="uploadStatusTableBody" class="text-gray-700 text-sm">
+                    <!-- Upload status rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- F. AUTO GENERATED INSIGHT (Row 5 – Dynamic Text Card) -->
+    <div id="autoInsightSection" class="bg-white rounded-lg shadow-lg p-6 mb-8 {% if show_insight_checkbox is not defined or not show_insight_checkbox %}hidden{% endif %}">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Summary Insight Otomatis</h3>
+        <p id="summaryInsight" class="text-lg text-gray-600 leading-relaxed">
+            <!-- Dynamic insight text will be generated here by JavaScript -->
+        </p>
+    </div>
+
+    <!-- Section 2: Tabel Laporan LTDBB -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Daftar Laporan LTDBB</h3>
+        <button id="exportExcelBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out mb-4">
+            Export ke Excel
+        </button>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Sandi PJP</th>
+                        <th class="py-3 px-6 text-left">Nomor Surat</th>
+                        <th class="py-3 px-6 text-left">Tanggal Surat</th>
+                        <th class="py-3 px-6 text-left">Periode</th>
+                        <th class="py-3 px-6 text-left">Jumlah Transaksi Keluar</th>
+                        <th class="py-3 px-6 text-left">Nilai Transaksi Keluar</th>
+                        <th class="py-3 px-6 text-left">Jumlah Transaksi Masuk</th>
+                        <th class="py-3 px-6 text-left">Nilai Transaksi Masuk</th>
+                        <th class="py-3 px-6 text-left">Jumlah Transaksi Domestik</th>
+                        <th class="py-3 px-6 text-left">Nilai Transaksi Domestik</th>
+                        <th class="py-3 px-6 text-left">Keterangan</th>
+                        <th class="py-3 px-6 text-left">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="text-gray-700 text-sm">
+                    <!-- Reports will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Menghapus bagian tombol "Kembali ke Detail PJP" yang lama #}
+    {#
+    <div class="text-center mt-8">
+        <a href="{{ url_for('show_pjp_detail', sandi=sandi_pjp) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+            Kembali ke Detail PJP
+        </a>
+    </div>
+    #}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script> {# SheetJS library #}
+<script>
+    // Global variables for charts to allow updating them
+    let numTransactionTrendChartInstance;
+    let amtTransactionTrendChartInstance;
+    let yearlyTransactionTrendChartInstance;
+    let numTransactionCompositionChartInstance;
+    let amtTransactionCompositionChartInstance;
+
+    // Data from Flask backend (all raw data for client-side filtering)
+    const allLtdbbReports = JSON.parse('{{ initial_dashboard_data_ltdbb | tojson }}');
+    const monthlyUploadStatusData = JSON.parse('{{ monthly_upload_status_ltdbb | tojson }}');
+    // KPI data from Flask backend (initial values)
+    // Note: kpisLtdbbInitial is now primarily for initial display,
+    // actual KPI values are recalculated on filter for dynamic updates.
+    const kpisLtdbbInitial = JSON.parse('{{ kpis_ltdbb | tojson }}');
+
+
+    // Variable to store currently filtered data for export
+    let currentFilteredReports = [];
+
+    // Helper to format currency
+    function formatRupiah(amount) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    // Helper to get month name from month number (string '01' to 'Januari')
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    function getMonthName(monthNumStr) {
+        return monthNames[parseInt(monthNumStr, 10) - 1];
+    }
+    const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    function getMonthShortName(monthNumStr) {
+        return monthShortNames[parseInt(monthNumStr, 10) - 1];
+    }
+
+    // Main function to filter data and render all dashboard components
+    function renderDashboard() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const startMonth = document.getElementById('startMonth').value;
+        const endMonth = document.getElementById('endMonth').value;
+
+        // Filter the data based on selected criteria
+        let filteredReports = allLtdbbReports.filter(report => {
+            const reportDate = new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1);
+            const startDate = new Date(startYear, parseInt(startMonth) - 1);
+            const endDate = new Date(endYear, parseInt(endMonth) - 1);
+
+            return reportDate >= startDate && reportDate <= endDate;
+        });
+
+        // Ensure reports are sorted chronologically for charts
+        filteredReports.sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], parseInt(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], parseInt(b["Periode Laporan"]) - 1);
+            return dateA - dateB;
+        });
+
+        // Store filtered data for export
+        currentFilteredReports = filteredReports;
+
+        updateKPIs(filteredReports);
+        updateCharts(filteredReports);
+        updateYearlyTransactionTrendChart(filteredReports);
+        updateCompositionCharts(filteredReports); // New function for composition charts
+        updateHeatmap(filteredReports);
+        updateReportsTable(filteredReports);
+        updateTopBottomTransactions(filteredReports); // New function for top/bottom transactions
+        generateSummaryInsight(filteredReports);
+        updateUploadStatusMap();
+    }
+
+    // B. KPI CARD SECTION Update
+    function updateKPIs(data) {
+        const totalNumOutgoing = data.reduce((sum, report) => sum + (report["Number Outgoing Transactions"] || 0), 0);
+        const totalAmtOutgoing = data.reduce((sum, report) => sum + (report["Amount Outgoing Transactions"] || 0), 0);
+        const totalNumIncoming = data.reduce((sum, report) => sum + (report["Number Incoming Transactions"] || 0), 0);
+        const totalAmtIncoming = data.reduce((sum, report) => sum + (report["Amount Incoming Transactions"] || 0), 0);
+        const totalNumDomestic = data.reduce((sum, report) => sum + (report["Number Domestic Transactions"] || 0), 0);
+        const totalAmtDomestic = data.reduce((sum, report) => sum + (report["Amount Domestic Transactions"] || 0), 0);
+
+        // Calculate overall totals
+        const totalAllTransactionsNum = totalNumOutgoing + totalNumIncoming + totalNumDomestic;
+        const totalAllTransactionsAmt = totalAmtOutgoing + totalAmtIncoming + totalAmtDomestic;
+
+        // Update new Total KPI cards
+        document.getElementById('kpiTotalAllNum').textContent = totalAllTransactionsNum;
+        document.getElementById('kpiTotalAllAmt').textContent = formatRupiah(totalAllTransactionsAmt);
+
+        // Update individual KPI cards
+        document.getElementById('kpiNumOutgoing').textContent = totalNumOutgoing;
+        document.getElementById('kpiAmtOutgoing').textContent = formatRupiah(totalAmtOutgoing);
+        document.getElementById('kpiNumIncoming').textContent = totalNumIncoming;
+        document.getElementById('kpiAmtIncoming').textContent = formatRupiah(totalAmtIncoming);
+        document.getElementById('kpiNumDomestic').textContent = totalNumDomestic;
+        document.getElementById('kpiAmtDomestic').textContent = formatRupiah(totalAmtDomestic);
+
+        // Calculate highest month for each transaction type based on filtered data
+        const monthlyOutgoingNum = {};
+        const monthlyOutgoingAmt = {};
+        const monthlyIncomingNum = {};
+        const monthlyIncomingAmt = {};
+        const monthlyDomesticNum = {};
+        const monthlyDomesticAmt = {};
+
+        data.forEach(report => {
+            const key = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyOutgoingNum[key] = (monthlyOutgoingNum[key] || 0) + (report["Number Outgoing Transactions"] || 0);
+            monthlyOutgoingAmt[key] = (monthlyOutgoingAmt[key] || 0) + (report["Amount Outgoing Transactions"] || 0);
+            monthlyIncomingNum[key] = (monthlyIncomingNum[key] || 0) + (report["Number Incoming Transactions"] || 0);
+            monthlyIncomingAmt[key] = (monthlyIncomingAmt[key] || 0) + (report["Amount Incoming Transactions"] || 0);
+            monthlyDomesticNum[key] = (monthlyDomesticNum[key] || 0) + (report["Number Domestic Transactions"] || 0);
+            monthlyDomesticAmt[key] = (monthlyDomesticAmt[key] || 0) + (report["Amount Domestic Transactions"] || 0);
+        });
+
+        // Helper to find the key with the maximum value in an object (already exists)
+        // function max(obj) { ... }
+
+        // Update highest month and value for Outgoing Number
+        let highestNumOutgoingMonth = Object.keys(monthlyOutgoingNum).length > 0 ? max(monthlyOutgoingNum) : "N/A";
+        let highestNumOutgoingValue = (highestNumOutgoingMonth !== "N/A" && monthlyOutgoingNum[highestNumOutgoingMonth] !== undefined) ? monthlyOutgoingNum[highestNumOutgoingMonth] : 0;
+        document.getElementById('kpiHighestNumOutgoingMonth').textContent = highestNumOutgoingMonth;
+        document.getElementById('kpiHighestNumOutgoingValue').textContent = highestNumOutgoingValue;
+
+        // Update highest month and value for Outgoing Amount
+        let highestAmtOutgoingMonth = Object.keys(monthlyOutgoingAmt).length > 0 ? max(monthlyOutgoingAmt) : "N/A";
+        let highestAmtOutgoingValue = (highestAmtOutgoingMonth !== "N/A" && monthlyOutgoingAmt[highestAmtOutgoingMonth] !== undefined) ? formatRupiah(monthlyOutgoingAmt[highestAmtOutgoingMonth]) : formatRupiah(0);
+        document.getElementById('kpiHighestAmtOutgoingMonth').textContent = highestAmtOutgoingMonth;
+        document.getElementById('kpiHighestAmtOutgoingValue').textContent = highestAmtOutgoingValue;
+
+        // Update highest month and value for Incoming Number
+        let highestNumIncomingMonth = Object.keys(monthlyIncomingNum).length > 0 ? max(monthlyIncomingNum) : "N/A";
+        let highestNumIncomingValue = (highestNumIncomingMonth !== "N/A" && monthlyIncomingNum[highestNumIncomingMonth] !== undefined) ? monthlyIncomingNum[highestNumIncomingMonth] : 0;
+        document.getElementById('kpiHighestNumIncomingMonth').textContent = highestNumIncomingMonth;
+        document.getElementById('kpiHighestNumIncomingValue').textContent = highestNumIncomingValue;
+
+        // Update highest month and value for Incoming Amount
+        let highestAmtIncomingMonth = Object.keys(monthlyIncomingAmt).length > 0 ? max(monthlyIncomingAmt) : "N/A";
+        let highestAmtIncomingValue = (highestAmtIncomingMonth !== "N/A" && monthlyIncomingAmt[highestAmtIncomingMonth] !== undefined) ? formatRupiah(monthlyIncomingAmt[highestAmtIncomingMonth]) : formatRupiah(0);
+        document.getElementById('kpiHighestAmtIncomingMonth').textContent = highestAmtIncomingMonth;
+        document.getElementById('kpiHighestAmtIncomingValue').textContent = highestAmtIncomingValue;
+
+        // Update highest month and value for Domestic Number
+        let highestNumDomesticMonth = Object.keys(monthlyDomesticNum).length > 0 ? max(monthlyDomesticNum) : "N/A";
+        let highestNumDomesticValue = (highestNumDomesticMonth !== "N/A" && monthlyDomesticNum[highestNumDomesticMonth] !== undefined) ? monthlyDomesticNum[highestNumDomesticMonth] : 0;
+        document.getElementById('kpiHighestNumDomesticMonth').textContent = highestNumDomesticMonth;
+        document.getElementById('kpiHighestNumDomesticValue').textContent = highestNumDomesticValue;
+
+        // Update highest month and value for Domestic Amount
+        let highestAmtDomesticMonth = Object.keys(monthlyDomesticAmt).length > 0 ? max(monthlyDomesticAmt) : "N/A";
+        let highestAmtDomesticValue = (highestAmtDomesticMonth !== "N/A" && monthlyDomesticAmt[highestAmtDomesticMonth] !== undefined) ? formatRupiah(monthlyDomesticAmt[highestAmtDomesticMonth]) : formatRupiah(0);
+        document.getElementById('kpiHighestAmtDomesticMonth').textContent = highestAmtDomesticMonth;
+        document.getElementById('kpiHighestAmtDomesticValue').textContent = highestAmtDomesticValue;
+    }
+
+    // C. VISUALISASI UTAMA (Charts) Update
+    function updateCharts(data) {
+        // Aggregate data for charts: sum numbers and amounts per month-year
+        const aggregatedData = {};
+        data.forEach(report => {
+            const label = `${getMonthShortName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!aggregatedData[label]) {
+                aggregatedData[label] = {
+                    'Number Outgoing Transactions': 0,
+                    'Amount Outgoing Transactions': 0,
+                    'Number Incoming Transactions': 0,
+                    'Amount Incoming Transactions': 0,
+                    'Number Domestic Transactions': 0,
+                    'Amount Domestic Transactions': 0,
+                    date: new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1)
+                };
+            }
+            aggregatedData[label]['Number Outgoing Transactions'] += (report["Number Outgoing Transactions"] || 0);
+            aggregatedData[label]['Amount Outgoing Transactions'] += (report["Amount Outgoing Transactions"] || 0);
+            aggregatedData[label]['Number Incoming Transactions'] += (report["Number Incoming Transactions"] || 0);
+            aggregatedData[label]['Amount Incoming Transactions'] += (report["Amount Incoming Transactions"] || 0);
+            aggregatedData[label]['Number Domestic Transactions'] += (report["Number Domestic Transactions"] || 0);
+            aggregatedData[label]['Amount Domestic Transactions'] += (report["Amount Domestic Transactions"] || 0);
+        });
+
+        // Sort aggregated data by date
+        const sortedAggregatedData = Object.keys(aggregatedData)
+            .map(key => ({ label: key, ...aggregatedData[key] }))
+            .sort((a, b) => a.date - b.date);
+
+        const chartLabels = sortedAggregatedData.map(item => item.label);
+
+        // Update Number Transaction Trend Line Chart
+        if (numTransactionTrendChartInstance) {
+            numTransactionTrendChartInstance.data.labels = chartLabels;
+            numTransactionTrendChartInstance.data.datasets[0].data = sortedAggregatedData.map(item => item['Number Outgoing Transactions']);
+            numTransactionTrendChartInstance.data.datasets[1].data = sortedAggregatedData.map(item => item['Number Incoming Transactions']);
+            numTransactionTrendChartInstance.data.datasets[2].data = sortedAggregatedData.map(item => item['Number Domestic Transactions']);
+            numTransactionTrendChartInstance.update();
+        } else {
+            const ctx1 = document.getElementById('numTransactionTrendChart').getContext('2d');
+            numTransactionTrendChartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Jumlah Transaksi Keluar',
+                            data: sortedAggregatedData.map(item => item['Number Outgoing Transactions']),
+                            borderColor: 'rgb(255, 99, 132)', // Merah
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Jumlah Transaksi Masuk',
+                            data: sortedAggregatedData.map(item => item['Number Incoming Transactions']),
+                            borderColor: 'rgb(54, 162, 235)', // Biru
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Jumlah Transaksi Domestik',
+                            data: sortedAggregatedData.map(item => item['Number Domestic Transactions']),
+                            borderColor: 'rgb(75, 192, 192)', // Hijau
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    label += context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Periode Laporan' } },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Jumlah Transaksi' },
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Amount Transaction Trend Line Chart
+        if (amtTransactionTrendChartInstance) {
+            amtTransactionTrendChartInstance.data.labels = chartLabels;
+            amtTransactionTrendChartInstance.data.datasets[0].data = sortedAggregatedData.map(item => item['Amount Outgoing Transactions']);
+            amtTransactionTrendChartInstance.data.datasets[1].data = sortedAggregatedData.map(item => item['Amount Incoming Transactions']);
+            amtTransactionTrendChartInstance.data.datasets[2].data = sortedAggregatedData.map(item => item['Amount Domestic Transactions']);
+            amtTransactionTrendChartInstance.update();
+        } else {
+            const ctx2 = document.getElementById('amtTransactionTrendChart').getContext('2d');
+            amtTransactionTrendChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Nilai Transaksi Keluar (Rp)',
+                            data: sortedAggregatedData.map(item => item['Amount Outgoing Transactions']),
+                            borderColor: 'rgb(255, 159, 64)', // Oranye
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Nilai Transaksi Masuk (Rp)',
+                            data: sortedAggregatedData.map(item => item['Amount Incoming Transactions']),
+                            borderColor: 'rgb(153, 102, 255)', // Ungu
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Nilai Transaksi Domestik (Rp)',
+                            data: sortedAggregatedData.map(item => item['Amount Domestic Transactions']),
+                            borderColor: 'rgb(255, 205, 86)', // Kuning
+                            backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    label += formatRupiah(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Periode Laporan' } },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Nilai Transaksi (Rp)' },
+                            ticks: { callback: function(value) { return formatRupiah(value); } }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // New function for Yearly Transaction Trend Chart
+    function updateYearlyTransactionTrendChart(data) {
+        // Aggregate data by year
+        const yearlyData = {};
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            if (!yearlyData[year]) {
+                yearlyData[year] = {
+                    'Total Number Transactions': 0,
+                    'Total Amount Transactions': 0
+                };
+            }
+            yearlyData[year]['Total Number Transactions'] += (report["Number Outgoing Transactions"] || 0) + (report["Number Incoming Transactions"] || 0) + (report["Number Domestic Transactions"] || 0);
+            yearlyData[year]['Total Amount Transactions'] += (report["Amount Outgoing Transactions"] || 0) + (report["Amount Incoming Transactions"] || 0) + (report["Amount Domestic Transactions"] || 0);
+        });
+
+        // Sort yearly data by year
+        const sortedYearlyData = Object.keys(yearlyData)
+            .map(year => ({ year: year, ...yearlyData[year] }))
+            .sort((a, b) => a - b);
+
+        const chartLabels = sortedYearlyData.map(item => item.year);
+        const chartTotalNumTransactions = sortedYearlyData.map(item => item['Total Number Transactions']);
+        const chartTotalAmtTransactions = sortedYearlyData.map(item => item['Total Amount Transactions']);
+
+        if (yearlyTransactionTrendChartInstance) {
+            yearlyTransactionTrendChartInstance.data.labels = chartLabels;
+            yearlyTransactionTrendChartInstance.data.datasets[0].data = chartTotalNumTransactions;
+            yearlyTransactionTrendChartInstance.data.datasets[1].data = chartTotalAmtTransactions;
+            yearlyTransactionTrendChartInstance.update();
+        } else {
+            const ctx = document.getElementById('yearlyTransactionTrendChart').getContext('2d');
+            yearlyTransactionTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Total Jumlah Transaksi per Tahun',
+                            data: chartTotalNumTransactions,
+                            borderColor: 'rgb(201, 203, 207)', // Abu-abu
+                            backgroundColor: 'rgba(201, 203, 207, 0.2)',
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Total Nilai Transaksi per Tahun (Rp)',
+                            data: chartTotalAmtTransactions,
+                            borderColor: 'rgb(255, 99, 132)', // Merah
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.dataset.label.includes('Nilai')) {
+                                        label += formatRupiah(context.raw);
+                                    } else {
+                                        label += context.raw;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tahun Laporan'
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Total Jumlah Transaksi'
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Total Nilai Transaksi (Rp)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatRupiah(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // D. KOMPOSISI TRANSAKSI (New Function for Composition Charts)
+    function updateCompositionCharts(data) {
+        const totalNumOutgoing = data.reduce((sum, report) => sum + (report["Number Outgoing Transactions"] || 0), 0);
+        const totalNumIncoming = data.reduce((sum, report) => sum + (report["Number Incoming Transactions"] || 0), 0);
+        const totalNumDomestic = data.reduce((sum, report) => sum + (report["Number Domestic Transactions"] || 0), 0);
+
+        const totalAmtOutgoing = data.reduce((sum, report) => sum + (report["Amount Outgoing Transactions"] || 0), 0);
+        const totalAmtIncoming = data.reduce((sum, report) => sum + (report["Amount Incoming Transactions"] || 0), 0);
+        const totalAmtDomestic = data.reduce((sum, report) => sum + (report["Amount Domestic Transactions"] || 0), 0);
+
+        const compositionLabels = ['Transaksi Keluar', 'Transaksi Masuk', 'Transaksi Domestik'];
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)', // Merah
+            'rgba(54, 162, 235, 0.7)', // Biru
+            'rgba(75, 192, 192, 0.7)'  // Hijau
+        ];
+        const borderColors = [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(75, 192, 192, 1)'
+        ];
+
+        // Update Number Transaction Composition Chart (Doughnut)
+        if (numTransactionCompositionChartInstance) {
+            numTransactionCompositionChartInstance.data.datasets[0].data = [totalNumOutgoing, totalNumIncoming, totalNumDomestic];
+            numTransactionCompositionChartInstance.update();
+        } else {
+            const ctx3 = document.getElementById('numTransactionCompositionChart').getContext('2d');
+            numTransactionCompositionChartInstance = new Chart(ctx3, {
+                type: 'doughnut',
+                data: {
+                    labels: compositionLabels,
+                    datasets: [{
+                        data: [totalNumOutgoing, totalNumIncoming, totalNumDomestic],
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    label += context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Amount Transaction Composition Chart (Doughnut)
+        if (amtTransactionCompositionChartInstance) {
+            amtTransactionCompositionChartInstance.data.datasets[0].data = [totalAmtOutgoing, totalAmtIncoming, totalAmtDomestic];
+            amtTransactionCompositionChartInstance.update();
+        } else {
+            const ctx4 = document.getElementById('amtTransactionCompositionChart').getContext('2d');
+            amtTransactionCompositionChartInstance = new Chart(ctx4, {
+                type: 'doughnut',
+                data: {
+                    labels: compositionLabels,
+                    datasets: [{
+                        data: [totalAmtOutgoing, totalAmtIncoming, totalAmtDomestic],
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    label += formatRupiah(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // NEW: Function to update Top 5 and Bottom 5 Transactions
+    function updateTopBottomTransactions(data) {
+        // Clear previous lists
+        document.getElementById('top5OutgoingAmt').innerHTML = '';
+        document.getElementById('bottom5OutgoingAmt').innerHTML = '';
+        document.getElementById('top5IncomingAmt').innerHTML = '';
+        document.getElementById('bottom5IncomingAmt').innerHTML = '';
+        document.getElementById('top5DomesticAmt').innerHTML = '';
+        document.getElementById('bottom5DomesticAmt').innerHTML = '';
+
+        if (data.length === 0) {
+            document.getElementById('top5OutgoingAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            document.getElementById('bottom5OutgoingAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            document.getElementById('top5IncomingAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            document.getElementById('bottom5IncomingAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            document.getElementById('top5DomesticAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            document.getElementById('bottom5DomesticAmt').innerHTML = '<li class="text-gray-500">Tidak ada data.</li>';
+            return;
+        }
+
+        // Aggregate data by month-year to avoid duplicate entries for the same month in the lists
+        const aggregatedMonthlyData = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            if (!aggregatedMonthlyData[monthYear]) {
+                aggregatedMonthlyData[monthYear] = {
+                    'Amount Outgoing Transactions': 0,
+                    'Amount Incoming Transactions': 0,
+                    'Amount Domestic Transactions': 0,
+                    'Number Outgoing Transactions': 0,
+                    'Number Incoming Transactions': 0,
+                    'Number Domestic Transactions': 0
+                };
+            }
+            aggregatedMonthlyData[monthYear]['Amount Outgoing Transactions'] += (report["Amount Outgoing Transactions"] || 0);
+            aggregatedMonthlyData[monthYear]['Amount Incoming Transactions'] += (report["Amount Incoming Transactions"] || 0);
+            aggregatedMonthlyData[monthYear]['Amount Domestic Transactions'] += (report["Amount Domestic Transactions"] || 0);
+            aggregatedMonthlyData[monthYear]['Number Outgoing Transactions'] += (report["Number Outgoing Transactions"] || 0);
+            aggregatedMonthlyData[monthYear]['Number Incoming Transactions'] += (report["Number Incoming Transactions"] || 0);
+            aggregatedMonthlyData[monthYear]['Number Domestic Transactions'] += (report["Number Domestic Transactions"] || 0);
+        });
+
+        const monthlyReports = Object.keys(aggregatedMonthlyData).map(key => ({
+            period: key,
+            ...aggregatedMonthlyData[key]
+        }));
+
+        // Sort and display Top 5 / Bottom 5 for each category (by Amount)
+        function populateTopBottomLists(topListId, bottomListId, propertyName, isAmount = true) {
+            const sortedData = [...monthlyReports].sort((a, b) => {
+                return b[propertyName] - a[propertyName]; // Descending for Top
+            });
+
+            const top5List = document.getElementById(topListId);
+            const bottom5List = document.getElementById(bottomListId);
+
+            // Add null checks for the list elements
+            if (!top5List) {
+                console.error(`Error: Could not find element with ID: ${topListId}`);
+                return;
+            }
+            if (!bottom5List) {
+                console.error(`Error: Could not find element with ID: ${bottomListId}`);
+                return;
+            }
+
+            // Top 5
+            for (let i = 0; i < Math.min(5, sortedData.length); i++) {
+                const item = sortedData[i];
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center py-1 px-2 border-b border-gray-100 last:border-b-0';
+                li.innerHTML = `<span class="font-medium">${item.period}</span> <span class="font-mono text-sm">${isAmount ? formatRupiah(item[propertyName]) : item[propertyName]}</span>`;
+                top5List.appendChild(li);
+            }
+            if (top5List.children.length === 0) top5List.innerHTML = '<li class="text-gray-500 py-1 px-2">Tidak ada data.</li>';
+
+
+            // Bottom 5 (reverse sort for ascending)
+            const sortedDataAsc = [...monthlyReports].sort((a, b) => {
+                return a[propertyName] - b[propertyName]; // Ascending for Bottom
+            });
+            for (let i = 0; i < Math.min(5, sortedDataAsc.length); i++) {
+                const item = sortedDataAsc[i];
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center py-1 px-2 border-b border-gray-100 last:border-b-0';
+                li.innerHTML = `<span class="font-medium">${item.period}</span> <span class="font-mono text-sm">${isAmount ? formatRupiah(item[propertyName]) : item[propertyName]}</span>`;
+                bottom5List.appendChild(li);
+            }
+            if (bottom5List.children.length === 0) bottom5List.innerHTML = '<li class="text-gray-500 py-1 px-2">Tidak ada data.</li>';
+        }
+
+        // Corrected calls to populateTopBottomLists with full element IDs
+        populateTopBottomLists('top5OutgoingAmt', 'bottom5OutgoingAmt', 'Amount Outgoing Transactions', true);
+        populateTopBottomLists('top5IncomingAmt', 'bottom5IncomingAmt', 'Amount Incoming Transactions', true);
+        populateTopBottomLists('top5DomesticAmt', 'bottom5DomesticAmt', 'Amount Domestic Transactions', true);
+    }
+
+
+    // E. HEATMAP MATRIX Update
+    function updateHeatmap(data) {
+        const heatmapData = {}; // { year: { monthNum: totalTransactionCount } }
+        const uniqueYears = new Set();
+        data.forEach(report => {
+            const year = report["Tahun Laporan"];
+            const month = report["Periode Laporan"];
+            uniqueYears.add(year);
+            if (!heatmapData[year]) {
+                heatmapData[year] = {};
+            }
+            heatmapData[year][month] = (heatmapData[year][month] || 0) +
+                                       (report["Number Outgoing Transactions"] || 0) +
+                                       (report["Number Incoming Transactions"] || 0) +
+                                       (report["Number Domestic Transactions"] || 0);
+        });
+
+        const sortedYears = Array.from(uniqueYears).sort((a, b) => a - b);
+        const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+        const heatmapTableBody = document.querySelector('#heatmapTable tbody');
+        heatmapTableBody.innerHTML = ''; // Clear existing rows
+
+        if (sortedYears.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data untuk heatmap.</td>`;
+            heatmapTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        sortedYears.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            months.forEach(month => {
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+                const totalTransactionCount = heatmapData[year] ? (heatmapData[year][month] || 0) : 0;
+                cell.textContent = totalTransactionCount;
+
+                // Simple color scale for heatmap (adjust as needed)
+                let bgColor = 'bg-white';
+                if (totalTransactionCount > 0) {
+                    if (totalTransactionCount >= 10000) bgColor = 'bg-blue-200';
+                    else if (totalTransactionCount >= 5000) bgColor = 'bg-blue-100';
+                    else bgColor = 'bg-gray-100';
+                }
+                cell.classList.add(bgColor);
+                cell.title = `Total Transaksi: ${totalTransactionCount}`; // Tooltip
+
+                row.appendChild(cell);
+            });
+            heatmapTableBody.appendChild(row);
+        });
+    }
+
+    // NEW: Function to update the Upload Status Map
+    function updateUploadStatusMap() {
+        // Correctly target the table body by its new ID
+        const uploadStatusTableBody = document.getElementById('uploadStatusTableBody');
+        if (!uploadStatusTableBody) {
+            console.error("Error: Could not find element with ID: uploadStatusTableBody");
+            return;
+        }
+        uploadStatusTableBody.innerHTML = ''; // Clear existing rows
+
+        const years = Object.keys(monthlyUploadStatusData)
+            .map(key => monthlyUploadStatusData[key].year)
+            .filter((value, index, self) => self.indexOf(value) === index) // Get unique years
+            .sort((a, b) => a - b); // Sort years ascending
+
+        const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+
+        if (years.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="13" class="py-3 px-6 text-center text-gray-500">Tidak ada data status upload laporan.</td>`;
+            uploadStatusTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        years.forEach(year => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            const yearCell = document.createElement('td');
+            yearCell.className = 'py-3 px-6 text-left font-semibold';
+            yearCell.textContent = year;
+            row.appendChild(yearCell);
+
+            months.forEach(monthNumStr => {
+                const periodKey = `${year}-${monthNumStr}`;
+                const status = monthlyUploadStatusData[periodKey]; // Get status for this month/year
+
+                const cell = document.createElement('td');
+                cell.className = 'py-3 px-6 text-center';
+
+                let cellContent = '';
+                let bgColor = 'bg-white'; // Default background
+                let tooltipText = '';
+
+                if (status) {
+                    if (status.uploaded) {
+                        if (status.days_late > 0) {
+                            // Sudah upload tapi terlambat (Oranye)
+                            bgColor = 'bg-orange-100';
+                            cellContent = `Terlambat (${status.days_late} hari)`; // Menambahkan jumlah hari terlambat
+                            tooltipText = `Uploaded: ${status.upload_date} (Terlambat ${status.days_late} hari)`;
+                        } else {
+                            // Sudah upload dan tepat waktu (Hijau)
+                            bgColor = 'bg-green-100';
+                            cellContent = `Tepat Waktu`;
+                            tooltipText = `Uploaded: ${status.upload_date} (Tepat Waktu)`;
+                        }
+                    } else {
+                        // Belum upload
+                        if (status.days_late !== null && status.days_late > 0) { // Jika sudah melewati jatuh tempo
+                            // Belum upload dan terlambat (Merah)
+                            bgColor = 'bg-red-200';
+                            cellContent = `Belum Upload (${status.days_late} hari)`; // Menambahkan jumlah hari terlambat
+                            tooltipText = `Belum Upload. Terlambat ${status.days_late} hari. Jatuh Tempo: ${status.due_date}`;
+                        } else {
+                            // Belum upload dan belum jatuh tempo (Abu-abu/Putih)
+                            bgColor = 'bg-gray-100'; // Atau 'bg-white' jika tidak ingin warna
+                            cellContent = 'Belum Upload';
+                            tooltipText = `Belum Upload. Jatuh Tempo: ${status.due_date}`;
+                        }
+                    }
+                } else {
+                    // Data status tidak tersedia
+                    cellContent = 'N/A';
+                    tooltipText = 'Data tidak tersedia';
+                }
+
+                cell.innerHTML = cellContent;
+                cell.classList.add(bgColor);
+                cell.title = tooltipText;
+                row.appendChild(cell);
+            });
+            uploadStatusTableBody.appendChild(row);
+        });
+    }
+
+    // F. AUTO GENERATED INSIGHT Update
+    function generateSummaryInsight(data) {
+        const showInsight = document.getElementById('showInsightCheckbox').checked;
+        const autoInsightSection = document.getElementById('autoInsightSection');
+        const summaryInsightText = document.getElementById('summaryInsight');
+
+        if (!showInsight) {
+            autoInsightSection.classList.add('hidden');
+            return;
+        } else {
+            autoInsightSection.classList.remove('hidden');
+        }
+
+        if (data.length === 0) {
+            summaryInsightText.textContent = "Tidak ada data LTDBB yang tersedia untuk periode filter ini.";
+            return;
+        }
+
+        const totalNumTransactions = data.reduce((sum, report) => sum + (report["Number Outgoing Transactions"] || 0) + (report["Number Incoming Transactions"] || 0) + (report["Number Domestic Transactions"] || 0), 0);
+        const totalAmtTransactions = data.reduce((sum, report) => sum + (report["Amount Outgoing Transactions"] || 0) + (report["Amount Incoming Transactions"] || 0) + (report["Amount Domestic Transactions"] || 0), 0);
+
+        // Find peak month for total number of transactions
+        const monthlyNumTransactions = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyNumTransactions[monthYear] = (monthlyNumTransactions[monthYear] || 0) + (report["Number Outgoing Transactions"] || 0) + (report["Number Incoming Transactions"] || 0) + (report["Number Domestic Transactions"] || 0);
+        });
+
+        let peakNumMonth = "N/A";
+        let peakNumCount = 0;
+        if (Object.keys(monthlyNumTransactions).length > 0) {
+            peakNumMonth = Object.keys(monthlyNumTransactions).reduce((a, b) => monthlyNumTransactions[a] > monthlyNumTransactions[b] ? a : b);
+            peakNumCount = monthlyNumTransactions[peakNumMonth];
+        }
+
+        // Find peak month for total amount of transactions
+        const monthlyAmtTransactions = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report['Periode Laporan'])} ${report['Tahun Laporan']}`;
+            monthlyAmtTransactions[monthYear] = (monthlyAmtTransactions[monthYear] || 0) + (report["Amount Outgoing Transactions"] || 0) + (report["Amount Incoming Transactions"] || 0) + (report["Amount Domestic Transactions"] || 0);
+        });
+
+        let peakAmtMonth = "N/A";
+        let peakAmtAmount = 0;
+        if (Object.keys(monthlyAmtTransactions).length > 0) {
+            peakAmtMonth = Object.keys(monthlyAmtTransactions).reduce((a, b) => monthlyAmtTransactions[a] > monthlyAmtTransactions[b] ? a : b);
+            peakAmtAmount = monthlyAmtTransactions[peakAmtMonth];
+        }
+
+        const firstReport = data[0];
+        const lastReport = data[data.length - 1];
+        const startDateString = `${getMonthName(firstReport['Periode Laporan'])} ${firstReport['Tahun Laporan']}`;
+        const endDateString = `${getMonthName(lastReport['Periode Laporan'])} ${lastReport['Tahun Laporan']}`;
+
+        // Re-aggregate data to get sorted monthly summary for trend analysis
+        const monthlySummaryForTrend = {};
+        data.forEach(report => {
+            const monthYear = `${getMonthName(report["Periode Laporan"])} ${report["Tahun Laporan"]}`;
+            if (!monthlySummaryForTrend[monthYear]) {
+                monthlySummaryForTrend[monthYear] = {
+                    num: 0,
+                    amt: 0,
+                    date: new Date(report["Tahun Laporan"], parseInt(report["Periode Laporan"]) - 1)
+                };
+            }
+            monthlySummaryForTrend[monthYear].num += (report["Number Outgoing Transactions"] || 0) + (report["Number Incoming Transactions"] || 0) + (report["Number Domestic Transactions"] || 0);
+            monthlySummaryForTrend[monthYear].amt += (report["Amount Outgoing Transactions"] || 0) + (report["Amount Incoming Transactions"] || 0) + (report["Amount Domestic Transactions"] || 0);
+        });
+
+        const sortedMonthlySummaryForTrend = Object.keys(monthlySummaryForTrend)
+            .map(key => ({ label: key, num: monthlySummaryForTrend[key].num, amt: monthlySummaryForTrend[key].amt, date: monthlySummaryForTrend[key].date }))
+            .sort((a, b) => a.date - b.date);
+
+        // Calculate month-over-month changes for total number of transactions
+        let maxNumIncrease = { month: 'N/A', value: 0 };
+        let maxNumDecrease = { month: 'N/A', value: 0 };
+        let trendNumInsight = "";
+
+        if (sortedMonthlySummaryForTrend.length > 1) {
+            for (let i = 1; i < sortedMonthlySummaryForTrend.length; i++) {
+                const currentMonthData = sortedMonthlySummaryForTrend[i];
+                const previousMonthData = sortedMonthlySummaryForTrend[i - 1];
+                const change = currentMonthData.num - previousMonthData.num;
+
+                if (change > maxNumIncrease.value) {
+                    maxNumIncrease = { month: currentMonthData.label, value: change };
+                }
+                if (change < maxNumDecrease.value) {
+                    maxNumDecrease = { month: currentMonthData.label, value: change };
+                }
+            }
+
+            if (maxNumIncrease.value > 0) {
+                trendNumInsight += `Peningkatan jumlah transaksi terbesar terjadi pada <strong>${maxNumIncrease.month}</strong> dengan kenaikan <strong>${maxNumIncrease.value}</strong> transaksi dari bulan sebelumnya. `;
+            }
+            if (maxNumDecrease.value < 0) {
+                trendNumInsight += `Penurunan jumlah transaksi terbesar terjadi pada <strong>${maxNumDecrease.month}</strong> dengan penurunan <strong>${Math.abs(maxNumDecrease.value)}</strong> transaksi dari bulan sebelumnya.`;
+            }
+            if (trendNumInsight === "") {
+                trendNumInsight = "Jumlah transaksi cenderung stabil sepanjang periode ini.";
+            }
+        } else if (sortedMonthlySummaryForTrend.length === 1) {
+            trendNumInsight = "Hanya ada data untuk satu bulan, tidak dapat menganalisis tren jumlah transaksi.";
+        } else {
+            trendNumInsight = "";
+        }
+
+        summaryInsightText.innerHTML = `
+            Dalam periode <strong>${startDateString} &ndash; ${endDateString}</strong>, terjadi <strong>${totalNumTransactions}</strong> transaksi
+            dengan total nilai sebesar <strong>${formatRupiah(totalAmtTransactions)}</strong>.<br><br>
+            Puncak jumlah transaksi terjadi pada <strong>${peakNumMonth}</strong> (${peakNumCount} transaksi).
+            Bulan dengan nilai transaksi tertinggi adalah <strong>${peakAmtMonth}</strong> mencapai <strong>${formatRupiah(peakAmtAmount)}</strong>.
+            <br><br>
+            ${trendNumInsight}
+        `;
+    }
+
+    // Update the list of reports table
+    function updateReportsTable(data) {
+        const reportsTableBody = document.getElementById('reportsTableBody');
+        reportsTableBody.innerHTML = ''; // Clear existing rows
+
+        if (data.length === 0) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.innerHTML = `<td colspan="12" class="py-3 px-6 text-center text-gray-500">Tidak ada laporan LTDBB yang tersedia untuk filter ini.</td>`;
+            reportsTableBody.appendChild(noDataRow);
+            return;
+        }
+
+        // Sort reports by date in descending order (most recent first) for the table
+        const sortedForTable = [...data].sort((a, b) => {
+            const dateA = new Date(a["Tahun Laporan"], parseInt(a["Periode Laporan"]) - 1);
+            const dateB = new Date(b["Tahun Laporan"], parseInt(b["Periode Laporan"]) - 1);
+            return dateB - dateA;
+        });
+
+        const currentSandiPjp = "{{ sandi_pjp }}"; // Access sandi_pjp directly from Jinja context
+
+        // Display all filtered reports in the table
+        sortedForTable.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+            // Construct the detail URL dynamically in JavaScript
+            const detailUrl = `/analisis_pjp/${currentSandiPjp}/ltdbb_report/${report['Tahun Laporan']}/${report['Periode Laporan']}`;
+
+            row.innerHTML = `
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Sandi PJP'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${report['Nomor Surat'] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left whitespace-nowrap">${String(report['Tanggal Surat'] || 'N/A')}</td> {# Explicitly convert to string #}
+                <td class="py-3 px-6 text-left whitespace-nowrap">${getMonthName(report["Periode Laporan"])}/${report["Tahun Laporan"]}</td>
+                <td class="py-3 px-6 text-left">${(report["Number Outgoing Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report["Amount Outgoing Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${(report["Number Incoming Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report["Amount Incoming Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${(report["Number Domestic Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${formatRupiah(report["Amount Domestic Transactions"] || 0)}</td>
+                <td class="py-3 px-6 text-left">${report["Keterangan"] || 'N/A'}</td>
+                <td class="py-3 px-6 text-left">
+                    <a href="${detailUrl}" class="text-blue-500 hover:underline">Lihat Detail</a>
+                </td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+        // Add console logs for debugging Tanggal Surat
+        console.log("Reports data for table:", data);
+        if (data.length > 0) {
+            console.log("First report Tanggal Surat (from JS data):", data[0]['Tanggal Surat']);
+        }
+    }
+
+    // Function to export filtered data to Excel
+    function exportToExcel() {
+        if (currentFilteredReports.length === 0) {
+            alert('Tidak ada data untuk diekspor. Harap filter data terlebih dahulu.');
+            return;
+        }
+
+        // Prepare data for Excel
+        const dataForExcel = currentFilteredReports.map(report => ({
+            'Sandi PJP': report['Sandi PJP'],
+            'Nama PJP': "{{ pjp_name }}",
+            'Tahun Laporan': report['Tahun Laporan'],
+            'Periode Laporan': getMonthName(report['Periode Laporan']),
+            'Nomor Surat': report['Nomor Surat'],
+            'Tanggal Surat': report['Tanggal Surat'], // Ensure this key is correct
+            'Jumlah Transaksi Keluar': (report['Number Outgoing Transactions'] || 0),
+            'Nilai Transaksi Keluar': (report['Amount Outgoing Transactions'] || 0),
+            'Jumlah Transaksi Masuk': (report['Number Incoming Transactions'] || 0),
+            'Nilai Transaksi Masuk': (report['Amount Incoming Transactions'] || 0),
+            'Jumlah Transaksi Domestik': (report['Number Domestic Transactions'] || 0),
+            'Nilai Transaksi Domestik': (report['Amount Domestic Transactions'] || 0),
+            'Keterangan': report['Keterangan'],
+            'File URL': report['File URL']
+        }));
+
+        // Create a workbook and a worksheet
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan LTDBB");
+
+        // Generate and download the Excel file
+        const fileName = `Laporan_LTDBB_${"{{ pjp_name | replace(' ', '_') }}"}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // Helper function to find the key with the maximum value in an object
+    function max(obj) {
+        if (Object.keys(obj).length === 0) {
+            return "N/A";
+        }
+        return Object.keys(obj).reduce((a, b) => obj[a] > obj[b] ? a : b);
+    }
+
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle initial year dropdown values
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+        const availableYears = JSON.parse('{{ available_years | tojson }}');
+
+        if (availableYears.length > 0) {
+            startYearSelect.value = availableYears[0];
+            endYearSelect.value = availableYears[availableYears.length - 1];
+        } else {
+            // Fallback if no years are available
+            startYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            endYearSelect.innerHTML = '<option value="">Tidak ada tahun</option>';
+            startYearSelect.disabled = true;
+            endYearSelect.disabled = true;
+        }
+
+        // Initial render of the dashboard with all data
+        renderDashboard();
+
+        document.getElementById('applyFilterBtn').addEventListener('click', renderDashboard);
+        document.getElementById('resetFilterBtn').addEventListener('click', function() {
+            // Reset filter values to initial state
+            if (availableYears.length > 0) {
+                document.getElementById('startYear').value = availableYears[0];
+                document.getElementById('endYear').value = availableYears[availableYears.length - 1];
+            } else {
+                document.getElementById('startYear').value = '';
+                document.getElementById('endYear').value = '';
+            }
+            document.getElementById('startMonth').value = '01';
+            document.getElementById('endMonth').value = '12';
+            document.getElementById('showInsightCheckbox').checked = false; // Uncheck insight
+            renderDashboard(); // Re-render with reset filters
+        });
+
+        document.getElementById('showInsightCheckbox').addEventListener('change', function() {
+            // When the checkbox changes, re-render the dashboard to update the insight section
+            renderDashboard();
+        });
+
+        // Event listener for Export to Excel button
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    });
+</script>
+
+{% endblock %}

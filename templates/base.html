@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FEDPSP Dashboard{% endblock %}</title> {# Updated default title #}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for smooth mobile menu transition */
+        .mobile-menu {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+            max-height: 0;
+        }
+        .mobile-menu.active {
+            max-height: 200px; /* Adjust based on content height, ensure it's enough for all links */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+    <header class="bg-white text-gray-800 p-4 shadow-lg sticky top-0 z-50 border-b-2 border-blue-500"> {# Changed background to white, added blue border #}
+        <nav class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('root') }}" class="flex items-center space-x-3 group"> {# Added group for hover effects #}
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/BI_Logo.png/1200px-BI_Logo.png" alt="BI Logo" class="h-10 w-auto transition-transform duration-300 group-hover:scale-105"> {# Increased logo size, added hover scale #}
+                {# Removed the span containing "FEDPSP" text #}
+            </a>
+
+            <!-- Desktop Navigation -->
+            <ul class="hidden md:flex space-x-6">
+                <li><a href="{{ url_for('analisis_pjp') }}" class="text-gray-700 hover:text-blue-600 transition duration-300 ease-in-out font-medium px-3 py-2 rounded-md hover:bg-blue-50">Analisis Berdasarkan PJP</a></li> {# Updated text/hover colors #}
+                <li><a href="{{ url_for('analisis_laporan') }}" class="text-gray-700 hover:text-blue-600 transition duration-300 ease-in-out font-medium px-3 py-2 rounded-md hover:bg-blue-50">Analisis Berdasarkan Laporan</a></li> {# Updated text/hover colors #}
+                <li><a href="{{ url_for('logout') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-300 ease-in-out shadow-md transform hover:-translate-y-0.5">Logout</a></li> {# Updated button color, added transform hover #}
+            </ul>
+
+            <!-- Mobile Menu Button (Hamburger) -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-700 focus:outline-none hover:text-blue-600 transition duration-300"> {# Updated button color #}
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Mobile Navigation (Hidden by default) -->
+        <div id="mobile-menu" class="mobile-menu md:hidden bg-gray-50 border-t border-gray-200"> {# Changed background to light gray, added top border #}
+            <ul class="flex flex-col items-center py-4 space-y-3">
+                <li><a href="{{ url_for('analisis_pjp') }}" class="block text-gray-700 hover:text-blue-600 py-2 px-4 rounded-md hover:bg-blue-100 w-full text-center transition duration-300">Analisis Berdasarkan PJP</a></li> {# Updated text/hover colors #}
+                <li><a href="{{ url_for('analisis_laporan') }}" class="block text-gray-700 hover:text-blue-600 py-2 px-4 rounded-md hover:bg-blue-100 w-full text-center transition duration-300">Analisis Berdasarkan Laporan</a></li> {# Updated text/hover colors #}
+                <li><a href="{{ url_for('logout') }}" class="block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full text-center shadow-md transition duration-300">Logout</a></li> {# Updated button color #}
+            </ul>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-gray-900 text-white p-4 text-center mt-8 shadow-inner">
+        <p>&copy; 2024 FEDPSP. All rights reserved.</p> {# Updated app name #}
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
